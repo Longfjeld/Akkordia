@@ -328,3 +328,77 @@ Appen kan tilby visning av hovedvokal, koring/harmony eller begge. Valget er lok
 ### Beslutning
 
 GitHub-repositoriet inneholder programkode, dokumentasjon, test-/migreringsverktøy og eventuelle syntetiske testdata. Faktiske banddata og migrerte sangfiler skal lagres i workspace hos storage-provider og ikke i kode-repositoriet.
+
+# DECISIONS – tillegg
+
+## ADR-0024 – `localStorage` brukes til lite workspace-register og preferanser
+
+Status: Accepted
+
+### Beslutning
+
+Akkordia bruker `localStorage` til:
+
+```text
+registrerte workspace-referanser
+aktiv workspaceId
+små lokale UI-preferanser
+```
+
+IndexedDB brukes senere til faktisk offline-cache for sanger og set-lister.
+
+### Begrunnelse
+
+Dette reduserer kjørekode og holder enkel konfigurasjon adskilt fra datasett/cache.
+
+---
+
+## ADR-0025 – OneDrive-workspace identifiseres med `driveId` og `itemId`
+
+Status: Accepted
+
+### Beslutning
+
+Akkordia skal ikke bruke lokal synkroniseringssti eller mappenavn som teknisk identitet for et OneDrive-workspace.
+
+En provider-referanse bruker stabile Graph-ID-er.
+
+---
+
+## ADR-0026 – Workspace opprettes bare eksplisitt
+
+Status: Accepted
+
+### Beslutning
+
+Valg av en vanlig mappe skal aldri automatisk skrive Akkordia-filer til mappen.
+
+Brukeren må eksplisitt velge å opprette nytt workspace.
+
+---
+
+## ADR-0027 – Fjerne lokal workspace-kobling er ikke sletting
+
+Status: Accepted
+
+### Beslutning
+
+`Fjern fra denne enheten` fjerner bare lokal registrering og cache.
+
+Sletting av data hos storage-provider er en separat funksjon og inngår ikke i første versjon.
+
+---
+
+## ADR-0028 – Ingen generell lokal mappevelger som primær arkitektur
+
+Status: Accepted
+
+### Beslutning
+
+Første reelle storage-provider er OneDrive via Microsoft Graph.
+
+Akkordia skal ikke basere hovedarkitekturen på nettleserens lokale File System Access API.
+
+### Begrunnelse
+
+Målplattformene omfatter Mac, iPhone og iPad. En providerbasert modell gir mer konsistent flerbruker-, delings- og tilgangsadferd.
