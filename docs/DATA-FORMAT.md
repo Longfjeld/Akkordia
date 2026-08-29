@@ -1,59 +1,68 @@
-# Akkordia v2 – dataformat
+# DATA-FORMAT
 
-**Status:** Song schema v1 fastsatt  
-**Dato:** 2026-08-29
+## Formål
 
-## 1. Prinsipper
+Dette dokumentet beskriver dataformatene for Akkordia v2.
 
-Dataformatet skal først og fremst gjøre applikasjonskoden enkel, tydelig og robust. JSON-filene er data, ikke programkode, og trenger derfor ikke minimeres dersom eksplisitte datafelt reduserer behovet for beregning eller særlogikk i appen.
+Målet er ikke minst mulig datamengde. Målet er en enkel, eksplisitt og forutsigbar datamodell som krever minst mulig kjørekode.
 
-Permanent brukerdata skal være forståelig og migrerbart uten avhengighet til gammel Akkordia-server.
+## Workspace-format
 
-## 2. Workspace-struktur
+Et workspace representerer ett band eller ett separat samarbeidsområde.
+
+Workspace-roten skal inneholde:
 
 ```text
 <workspace>/
 ├── akkordia.json
 ├── songs/
-│   └── <song-id>.json
 └── setlists/
-    └── <setlist-id>.json
 ```
 
-Produksjonsdata for band skal ligge i workspace hos storage-provider, ikke i GitHub-repositoriet med programkoden.
+### `akkordia.json`
 
-## 3. `akkordia.json`
-
-Foreløpig workspace-format:
+Eksempel:
 
 ```json
 {
   "format": "akkordia-workspace",
   "schemaVersion": 1,
-  "workspaceId": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "The Tumbleweeds",
-  "created": "2026-08-29T18:00:00Z",
-  "modified": "2026-08-29T18:00:00Z"
+  "workspaceId": "9cfc64f0-7c47-41f4-8781-b09d3ff98d2e",
+  "name": "BoM"
 }
 ```
 
-|Felt|Type|Krav|
-|:---|:---|:---|
-|`format`|string|Må være `akkordia-workspace`|
-|`schemaVersion`|integer|Starter på `1`|
-|`workspaceId`|string|Stabil unik ID|
-|`name`|string|Visningsnavn for band/område|
-|`created`|ISO 8601|Opprettelsestidspunkt|
-|`modified`|ISO 8601|Siste endring av workspace-metadata|
+|Felt|Type|Påkrevd|Beskrivelse|
+|:---|:---|:---|:---|
+|`format`|string|Ja|Fast verdi `akkordia-workspace`|
+|`schemaVersion`|number|Ja|Workspace-schema. Første versjon er `1`|
+|`workspaceId`|string|Ja|Stabil UUID som ikke endres ved navneendring|
+|`name`|string|Ja|Visningsnavn for band/workspace|
 
-Workspace-formatet er ikke endelig låst i Fase 1. Song schema v1 er låst.
+Workspace-ID skal være stabil. `name` kan endres senere uten å påvirke referanser.
 
-## 4. Song schema v1
+Det skal ikke lagres aktiv set-list, sist brukte visning eller andre brukerpreferanser i `akkordia.json`.
 
-Hver sang lagres som egen fil:
+## Sangfiler
+
+Sanger lagres som én JSON-fil per sang i:
 
 ```text
-songs/<song-id>.json
+songs/
+```
+
+Song schema v1 følger tidligere dokumentert modell.
+
+`playback` er valgfritt. Dersom feltet mangler, bruker applikasjonen standardverdier ved kjøring.
+
+Historisk servermetadata migreres ikke.
+
+## Setlist schema v1
+
+Hver set-list lagres som én JSON-fil i:
+
+```text
+setlists/
 ```
 
 Eksempel:
@@ -61,177 +70,95 @@ Eksempel:
 ```json
 {
   "schemaVersion": 1,
-  "id": "song_95788c4c51b2_19bd532ad59",
-  "title": "O Children",
-  "chordSet": [
-    "Em",
-    "C",
-    "Am",
-    "G",
-    "D",
-    "Cmaj7"
-  ],
-  "transpose": 0,
-  "playback": {
-    "bpm": 60,
-    "beatsPerLine": 4
-  },
-  "sections": []
-}
-```
-
-`playback` er valgfritt. Appen kan bruke standardverdier dersom feltet mangler. Nye og redigerte sanger kan få eksplisitt `playback` når brukeren setter BPM/autoscroll-data.
-
-|Felt|Type|Krav|
-|:---|:---|:---|
-|`schemaVersion`|integer|Obligatorisk, verdi `1`|
-|`id`|string|Obligatorisk stabil sang-ID|
-|`title`|string|Obligatorisk|
-|`chordSet`|array|Obligatorisk liste over sangens akkordpalett|
-|`transpose`|number|Felles transponering for hele sangen|
-|`playback`|object|Valgfritt|
-|`sections`|array|Obligatorisk|
-
-### 4.1 Playback
-
-Når feltet finnes:
-
-```json
-{
-  "bpm": 90,
-  "beatsPerLine": 4
-}
-```
-
-|Felt|Type|Betydning|
-|:---|:---|:---|
-|`bpm`|number|Felles BPM for sangen|
-|`beatsPerLine`|number|Antall beats som brukes per sanglinje ved autoscroll|
-
-Fravær av `playback` er gyldig schema v1 og skal ikke fylles automatisk ved migrering.
-
-## 5. Seksjoner
-
-Eksempel:
-
-```json
-{
-  "id": "sec_d81fe2267deb3_19bd70cb924",
-  "type": "verse",
-  "label": "Vers 1",
-  "transpose": 0,
-  "lines": []
-}
-```
-
-Interne seksjonstyper i schema v1:
-
-|Type|Betydning|
-|:---|:---|
-|`intro`|Intro|
-|`verse`|Vers|
-|`chorus`|Refreng/chorus|
-|`bridge`|Bridge|
-|`interlude`|Interlude/mellomspill|
-
-`type` er en intern kode. `label` er brukerens visningstekst og beholdes uendret.
-
-Seksjonsnivået har egen `transpose`. Effektiv transponering kan dermed beregnes fra sangens felles `transpose` og seksjonens `transpose`.
-
-## 6. Linjer
-
-Hver sanglinje har følgende struktur:
-
-```json
-{
-  "vocal": "Pass me that lovely little gun",
-  "harmony": "",
-  "chords": []
-}
-```
-
-|Felt|Type|Krav|
-|:---|:---|:---|
-|`vocal`|string|Hovedvokal/tekst, tom streng tillatt|
-|`harmony`|string|Koring/harmony, tom streng tillatt|
-|`chords`|array|Plasserte akkorder, tom array tillatt|
-
-Vokal/koring-visning er en lokal UI-preferanse og lagres ikke i sangfilen.
-
-## 7. Akkorder
-
-Plassert akkord:
-
-```json
-{
-  "id": "ch_721f96cc51bc2_19bd7ef3e2b",
-  "name": "Em",
-  "pos": 0
-}
-```
-
-|Felt|Type|Betydning|
-|:---|:---|:---|
-|`id`|string|Stabil ID for akkordforekomsten|
-|`name`|string|Akkordnavn|
-|`pos`|number|Tegn-/kolonneposisjon på sanglinjen|
-
-`chordSet` skal ikke beregnes automatisk bare fra plasserte akkorder. Eksisterende data viser at akkordsettet kan inneholde akkorder som ennå ikke er plassert i sangen.
-
-## 8. Metadata fra gammel løsning
-
-Følgende felt migreres ikke:
-
-```text
-_server
-_updatedAt
-_updatedBy
-```
-
-Storage-providerens filmetadata brukes senere for lagringsrelatert versjons- og endringsinformasjon.
-
-## 9. ID-er
-
-Eksisterende sang-, seksjons- og akkord-ID-er beholdes ved migrering.
-
-Nye objekter som opprettes direkte i Akkordia v2 kan bruke en ny ID-generator, men appen må støtte eksisterende ID-er uten konvertering.
-
-## 10. Set-list schema v1
-
-Foreløpig format:
-
-```json
-{
-  "schemaVersion": 1,
-  "id": "550e8400-e29b-41d4-a716-446655440001",
-  "name": "Folken 14. september",
+  "id": "e03552b5-66e7-4eb7-8f2d-0c06bd88767d",
+  "name": "Eksempel set-liste",
   "songs": [
-    "song-a",
-    "song-b",
-    "song-a"
+    "song_example_a",
+    "song_example_b",
+    "song_example_a"
   ]
 }
 ```
 
-|Felt|Type|Krav|
-|:---|:---|:---|
-|`schemaVersion`|integer|Starter på `1`|
-|`id`|string|Stabil unik set-list-ID|
-|`name`|string|Visningsnavn|
-|`songs`|array|Sang-ID-er i eksplisitt rekkefølge|
+|Felt|Type|Påkrevd|Beskrivelse|
+|:---|:---|:---|:---|
+|`schemaVersion`|number|Ja|Setlist-schema. Første versjon er `1`|
+|`id`|string|Ja|Stabil UUID for set-listen|
+|`name`|string|Ja|Fritt navn valgt av bruker|
+|`songs`|array[string]|Ja|Ordnet liste med sang-ID-er|
 
-Samme sang-ID kan forekomme flere ganger i samme set-list. Spill-modus må derfor navigere etter posisjon i set-listen og ikke anta at sang-ID er unik i listen.
+Samme sang-ID kan forekomme flere ganger i `songs`.
 
-Fritekstposter inngår ikke i set-list-formatet.
+Eksempel:
 
-## 11. Schema-versjonering
+```json
+{
+  "songs": [
+    "song_a",
+    "song_b",
+    "song_a"
+  ]
+}
+```
 
-Permanente datafiler skal ha `schemaVersion` der formatet er versjonert av Akkordia.
+Dette betyr at `song_a` spilles både som første og tredje post.
 
-Ukjent schema-versjon skal ikke endres eller overskrives stille. Eventuelle senere schemaendringer skal ha eksplisitt og testbar migrering.
+Det brukes ikke egne entry-ID-er i schema v1.
 
-## 12. Private notater
+Rekkefølgen i arrayet er set-listens rekkefølge.
 
-Ikke definert i schema v1.
+Private notater inngår ikke i Setlist schema v1.
 
-Status: Deferred.
+## Lokale brukerpreferanser
+
+Følgende skal lagres lokalt på enheten og ikke i workspace-data:
+
+|Preferanse|Lagring|
+|:---|:---|
+|Sist brukte workspace|IndexedDB eller tilsvarende lokal lagring|
+|Sist brukte set-list|Lokal lagring|
+|Vokal/koring-visning|Lokal lagring|
+|Fontstørrelse|Lokal lagring|
+
+Dette gjør at ulike bandmedlemmer kan bruke samme workspace uten å påvirke hverandres personlige visning.
+
+## Validering av workspace
+
+En katalog regnes som et gyldig Akkordia-workspace når:
+
+1. `akkordia.json` finnes i katalogroten.
+2. JSON-filen kan parses.
+3. `format` er `akkordia-workspace`.
+4. `schemaVersion` er støttet.
+5. `workspaceId` finnes og er gyldig UUID.
+6. `name` er en ikke-tom streng.
+7. `songs/` finnes.
+8. `setlists/` finnes.
+
+Hvis brukeren velger en annen mappe, skal appen ikke skrive data dit før brukeren uttrykkelig oppretter et nytt workspace.
+
+## Oppretting av workspace i appen
+
+Når funksjonen implementeres skal appen:
+
+```text
+Velg mappe
+↓
+kontroller om akkordia.json finnes
+↓
+hvis ja: tilby å åpne eksisterende workspace
+↓
+hvis nei: tilby "Opprett nytt Akkordia-workspace"
+↓
+be om navn
+↓
+generer workspaceId
+↓
+opprett akkordia.json
+opprett songs/
+opprett setlists/
+↓
+valider resultatet
+```
+
+Appen skal aldri automatisk gjøre en tilfeldig valgt katalog til et workspace uten eksplisitt brukerhandling.
