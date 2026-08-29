@@ -1,0 +1,25 @@
+.DS_Store
+
+# Editor / temporary files
+*.swp
+*.tmp
+
+# Dependencies if introduced later
+node_modules/
+
+# Secrets / local configuration
+.env
+.env.*
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Temporary working data
+tmp/
+work/
+
+# BBEdit-filer
+Akkordia-GitHub-oppsett.md
+akkordia.bbprojectd
