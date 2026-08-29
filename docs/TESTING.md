@@ -150,3 +150,27 @@ UI-automatisering innføres bare der den gir tydelig verdi sammenlignet med vedl
 |Wake Lock|Fungerer eller feiler kontrollert|
 |Migrering|Alle testede eksisterende sanger migreres korrekt|
 |Dokumentasjon|Oppdatert mot faktisk implementasjon|
+
+---
+
+## Fase 1 – migreringstest
+
+Migreringsverktøyet skal alltid valideres mot kildeeksport før data tas i bruk.
+
+Kommando:
+
+```bash
+node tools/validate-migration.mjs /sti/til/ttc_all_songs.json work/migration/songs
+```
+
+Godkjent referanseresultat for mottatt eksport 2026-08-29:
+
+|Kontroll|Forventet|
+|:---|:---|
+|Sanger|16|
+|Seksjoner|69|
+|Linjer|468|
+|Plasserte akkorder|294|
+|Musikalsk/strukturell datalikhet|PASS|
+|Gammel metadata fjernet|PASS|
+|Seksjonstype-normalisering|PASS|

@@ -242,3 +242,89 @@ V2 har ikke egen Akkordia-brukeridentitet, og det er derfor ikke avgjort hvor pr
 ### Beslutning
 
 Funksjonen tas ikke inn i første permanente datamodell før lagrings- og synkroniseringsmodell er besluttet.
+
+---
+
+## ADR-0017 – Dataformat optimaliseres for enkel kjørekode
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+JSON er brukerdata, ikke programkode. Dataformatet skal derfor ikke minimeres for sin egen skyld. Eksplisitte og eventuelt noe redundante data er akseptabelt når dette gir enklere, tydeligere og mer robust kjørekode.
+
+### Konsekvenser
+
+- enkel programlogikk prioriteres foran minimale JSON-filer
+- felt fjernes bare når de ikke har funksjonell verdi
+- `chordSet` beholdes eksplisitt og beregnes ikke fra plasserte akkorder
+
+---
+
+## ADR-0018 – Playback er valgfritt i Song schema v1
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+`playback` er valgfritt i sangfilen. Manglende `playback` fylles ikke automatisk inn under migrering.
+
+Appen kan bruke standardverdi ved visning/avspilling, og redigering i appen kan senere opprette eller endre `playback` eksplisitt.
+
+---
+
+## ADR-0019 – Gammel server- og endringsmetadata migreres ikke
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+`_server`, `_updatedAt` og `_updatedBy` fjernes ved migrering.
+
+Historiske metadata fra gammel driftsmodell skal ikke påvirke v2-datamodellen.
+
+---
+
+## ADR-0020 – Seksjonstyper bruker normaliserte interne koder
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+Følgende migrering brukes:
+
+|Gammel verdi|Schema v1|
+|:---|:---|
+|`Intro`|`intro`|
+|`Vers`|`verse`|
+|`Chorus`|`chorus`|
+|`Bridge`|`bridge`|
+|`Interlude`|`interlude`|
+
+`label` beholdes uendret og brukes som brukerens visningstekst.
+
+---
+
+## ADR-0021 – Vokal/koring-visning er lokal preferanse
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+Appen kan tilby visning av hovedvokal, koring/harmony eller begge. Valget er lokal bruker-/enhetspreferanse og skal ikke lagres som felles sangdata.
+
+---
+
+## ADR-0022 – Produksjonsdata lagres ikke i kode-repositoriet
+
+**Status:** Accepted  
+**Dato:** 2026-08-29
+
+### Beslutning
+
+GitHub-repositoriet inneholder programkode, dokumentasjon, test-/migreringsverktøy og eventuelle syntetiske testdata. Faktiske banddata og migrerte sangfiler skal lagres i workspace hos storage-provider og ikke i kode-repositoriet.
