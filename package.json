@@ -1,0 +1,10 @@
+{
+  "name": "akkordia",
+  "private": true,
+  "scripts": {
+    "vendor:msal": "node tools/vendor-msal.mjs"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "5.20.0"
+  }
+}

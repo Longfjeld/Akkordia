@@ -18,25 +18,13 @@ export function saveWorkspace(workspace) {
   return workspace;
 }
 
-export function removeWorkspace(workspaceId) {
-  const next = getWorkspaces().filter(item => item.workspaceId !== workspaceId);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-
-  if (getActiveWorkspaceId() === workspaceId) {
-    localStorage.removeItem(ACTIVE_KEY);
-  }
-}
-
 export function getActiveWorkspaceId() {
   return localStorage.getItem(ACTIVE_KEY);
 }
 
 export function setActiveWorkspaceId(workspaceId) {
-  if (workspaceId) {
-    localStorage.setItem(ACTIVE_KEY, workspaceId);
-  } else {
-    localStorage.removeItem(ACTIVE_KEY);
-  }
+  if (workspaceId) localStorage.setItem(ACTIVE_KEY, workspaceId);
+  else localStorage.removeItem(ACTIVE_KEY);
 }
 
 export function getActiveWorkspace() {

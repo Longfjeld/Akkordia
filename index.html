@@ -6,13 +6,15 @@
   <meta name="theme-color" content="#ffffff">
   <title>Akkordia</title>
   <link rel="stylesheet" href="./css/app.css">
+  <script src="./vendor/msal-browser.min.js"></script>
 </head>
 <body>
   <header class="app-header">
     <div class="brand">Akkordia</div>
-    <button id="workspaceButton" class="workspace-button" type="button" aria-haspopup="true">
-      Ingen band valgt
-    </button>
+    <div class="header-actions">
+      <button id="workspaceButton" class="workspace-button" type="button">Ingen band valgt</button>
+      <button id="accountButton" class="account-button" type="button">Logg inn</button>
+    </div>
   </header>
 
   <nav class="main-nav" aria-label="Hovednavigasjon">
@@ -22,18 +24,38 @@
   </nav>
 
   <main id="app" class="app-main">
-    <section class="empty-state">
+    <section id="welcome" class="panel empty-state">
       <h1>Velkommen til Akkordia</h1>
-      <p>Koble til et eksisterende band eller opprett et nytt band for å komme i gang.</p>
+      <p>Koble til et eksisterende band i OneDrive for å komme i gang.</p>
       <div class="actions">
         <button id="connectWorkspace" type="button">Koble til band</button>
-        <button id="createWorkspace" type="button" class="secondary">Opprett nytt band</button>
+        <button id="createWorkspace" type="button" class="secondary" disabled>Opprett nytt band</button>
       </div>
-      <p id="phaseNotice" class="notice">
-        OneDrive-tilkobling implementeres i neste trinn.
-      </p>
+      <p class="notice">Oppretting av nye band kommer i neste trinn.</p>
     </section>
+
+    <section id="workspaceStatus" class="panel hidden" aria-live="polite"></section>
   </main>
+
+  <dialog id="folderDialog" class="folder-dialog">
+    <form method="dialog" class="folder-dialog-inner">
+      <header class="dialog-header">
+        <div>
+          <h2>Velg Akkordia-mappe</h2>
+          <p id="folderPath" class="muted">OneDrive</p>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="Lukk">×</button>
+      </header>
+
+      <div class="folder-toolbar">
+        <button id="folderUp" type="button" class="secondary">Opp ett nivå</button>
+        <button id="selectFolder" type="button">Bruk denne mappen</button>
+      </div>
+
+      <div id="folderMessage" class="message hidden" aria-live="polite"></div>
+      <div id="folderList" class="folder-list"></div>
+    </form>
+  </dialog>
 
   <script type="module" src="./js/app.js"></script>
 </body>
