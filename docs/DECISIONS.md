@@ -705,3 +705,28 @@ Status: Accepted
 Sist valgte set-list lagres lokalt per `workspaceId`.
 
 Dette feltet lagres ikke i `akkordia.json` eller set-listfilen.
+
+# DECISIONS-ADDENDUM-M5.1
+
+## Setlist schema v2
+
+Set-lister bruker én ordnet `items`-liste med to posttyper:
+
+```text
+song
+part
+```
+
+Deler er markører i samme sekvens som sangene, ikke separate nestede sanglister.
+
+## Delnavn
+
+Delnavn er fritekst. UI kan foreslå vanlige navn som `Sett 1`, `Sett 2` og `Encore`, men schemaet har ingen fast enum.
+
+## Kompatibilitet
+
+Schema v1 støttes ved lesing og normaliseres i minnet til v2. Migrering til v2 skjer først ved eksplisitt lagring.
+
+## Identitet
+
+Det innføres ikke permanente entry-ID-er. Midlertidige UI-nøkler brukes fortsatt bare under redigering og lagres ikke i JSON.

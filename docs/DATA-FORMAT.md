@@ -57,7 +57,7 @@ Song schema v1 følger tidligere dokumentert modell.
 
 Historisk servermetadata migreres ikke.
 
-## Setlist schema v1
+## Setlist schema v2
 
 Hver set-list lagres som én JSON-fil i:
 
@@ -65,49 +65,51 @@ Hver set-list lagres som én JSON-fil i:
 setlists/
 ```
 
+Schema v2 erstatter den flate `songs`-listen med én ordnet `items`-liste. Listen kan inneholde både sanger og delmarkører.
+
 Eksempel:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "e03552b5-66e7-4eb7-8f2d-0c06bd88767d",
   "name": "Eksempel set-liste",
-  "songs": [
-    "song_example_a",
-    "song_example_b",
-    "song_example_a"
+  "items": [
+    {"type": "part", "name": "Sett 1"},
+    {"type": "song", "songId": "song_example_a"},
+    {"type": "song", "songId": "song_example_b"},
+    {"type": "part", "name": "Encore"},
+    {"type": "song", "songId": "song_example_a"}
   ]
 }
 ```
 
 |Felt|Type|Påkrevd|Beskrivelse|
 |:---|:---|:---|:---|
-|`schemaVersion`|number|Ja|Setlist-schema. Første versjon er `1`|
+|`schemaVersion`|number|Ja|Setlist-schema. Gjeldende versjon er `2`|
 |`id`|string|Ja|Stabil UUID for set-listen|
 |`name`|string|Ja|Fritt navn valgt av bruker|
-|`songs`|array[string]|Ja|Ordnet liste med sang-ID-er|
+|`items`|array[object]|Ja|Ordnet liste med sanger og deler|
 
-Samme sang-ID kan forekomme flere ganger i `songs`.
-
-Eksempel:
+Sangpost:
 
 ```json
-{
-  "songs": [
-    "song_a",
-    "song_b",
-    "song_a"
-  ]
-}
+{"type": "song", "songId": "song_a"}
 ```
 
-Dette betyr at `song_a` spilles både som første og tredje post.
+Delpost:
 
-Det brukes ikke egne entry-ID-er i schema v1.
+```json
+{"type": "part", "name": "Sett 1"}
+```
 
-Rekkefølgen i arrayet er set-listens rekkefølge.
+Delnavn er fritekst. `Sett 1`, `Sett 2` og `Encore` er vanlige eksempler, men schemaet begrenser ikke antall eller navn.
 
-Private notater inngår ikke i Setlist schema v1.
+Samme sang-ID kan forekomme flere ganger. Det brukes ikke permanente entry-ID-er. Rekkefølgen i `items` er set-listens rekkefølge.
+
+Setlist schema v1 leses fortsatt. Ved lasting normaliseres en v1-fil i minnet til v2 ved å gjøre hver `songs[]`-referanse om til en `song`-post. Første lagring skriver filen som schema v2. Ingen automatisk skylagring skjer bare fordi en v1-fil leses.
+
+Private notater inngår ikke i Setlist schema v2.
 
 ## Lokale brukerpreferanser
 

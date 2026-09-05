@@ -26,8 +26,8 @@ export async function loadSetlists(workspace) {
 
   const results = await Promise.allSettled(files.map(async file => {
     const ref = refFromItem(file, folder.driveId);
-    const setlist = await getFileJson(ref.driveId, ref.itemId);
-    validateSetlist(setlist, file.name);
+    const raw = await getFileJson(ref.driveId, ref.itemId);
+    const setlist = normalizeSetlist(raw, file.name);
     setlistStorage.set(setlist, {
       driveId: ref.driveId,
       itemId: ref.itemId,
@@ -84,10 +84,10 @@ export async function saveSetlist(workspace, setlist, existingSetlist = null) {
 
 export function createSetlist() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: crypto.randomUUID(),
     name: "Ny set-liste",
-    songs: []
+    items: []
   };
 }
 
@@ -97,13 +97,48 @@ export function cloneSetlist(setlist) {
 
 export function validateSetlist(setlist, filename = "set-listfil") {
   if (!setlist || typeof setlist !== "object") throw new Error(`${filename} inneholder ikke et JSON-objekt.`);
-  if (setlist.schemaVersion !== 1) throw new Error(`${filename}: schemaVersion ${setlist.schemaVersion ?? "mangler"} støttes ikke.`);
+  if (setlist.schemaVersion !== 2) throw new Error(`${filename}: schemaVersion ${setlist.schemaVersion ?? "mangler"} støttes ikke for lagring.`);
   if (typeof setlist.id !== "string" || !setlist.id.trim()) throw new Error(`${filename}: mangler gyldig id.`);
   if (typeof setlist.name !== "string" || !setlist.name.trim()) throw new Error(`${filename}: mangler navn.`);
-  if (!Array.isArray(setlist.songs)) throw new Error(`${filename}: mangler songs-array.`);
-  if (setlist.songs.some(id => typeof id !== "string" || !id.trim())) {
-    throw new Error(`${filename}: songs inneholder ugyldig sang-ID.`);
+  if (!Array.isArray(setlist.items)) throw new Error(`${filename}: mangler items-array.`);
+
+  setlist.items.forEach((item, index) => {
+    if (!item || typeof item !== "object") throw new Error(`${filename}: items[${index}] er ugyldig.`);
+    if (item.type === "song") {
+      if (typeof item.songId !== "string" || !item.songId.trim()) {
+        throw new Error(`${filename}: items[${index}] mangler gyldig songId.`);
+      }
+      return;
+    }
+    if (item.type === "part") {
+      if (typeof item.name !== "string" || !item.name.trim()) {
+        throw new Error(`${filename}: items[${index}] mangler navn på del.`);
+      }
+      return;
+    }
+    throw new Error(`${filename}: items[${index}] har ukjent type.`);
+  });
+}
+
+function normalizeSetlist(raw, filename) {
+  if (!raw || typeof raw !== "object") throw new Error(`${filename} inneholder ikke et JSON-objekt.`);
+
+  if (raw.schemaVersion === 1) {
+    if (typeof raw.id !== "string" || !raw.id.trim()) throw new Error(`${filename}: mangler gyldig id.`);
+    if (typeof raw.name !== "string" || !raw.name.trim()) throw new Error(`${filename}: mangler navn.`);
+    if (!Array.isArray(raw.songs) || raw.songs.some(id => typeof id !== "string" || !id.trim())) {
+      throw new Error(`${filename}: mangler gyldig songs-array.`);
+    }
+    return {
+      schemaVersion: 2,
+      id: raw.id,
+      name: raw.name,
+      items: raw.songs.map(songId => ({ type: "song", songId }))
+    };
   }
+
+  validateSetlist(raw, filename);
+  return raw;
 }
 
 async function getSetlistsFolder(workspace) {

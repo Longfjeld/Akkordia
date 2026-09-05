@@ -320,6 +320,7 @@ function renderSetlist(setlist) {
   editingSetlist = null;
   ui.setlistDetail.replaceChildren();
   const songById = new Map(songs.map(song => [song.id, song]));
+  const songItems = setlist.items.filter(item => item.type === "song");
 
   const header = document.createElement("header");
   header.className = "setlist-header";
@@ -337,23 +338,46 @@ function renderSetlist(setlist) {
 
   const meta = document.createElement("p");
   meta.className = "muted song-meta";
-  meta.textContent = `${setlist.songs.length} ${setlist.songs.length === 1 ? "sang" : "sanger"}`;
+  meta.textContent = `${songItems.length} ${songItems.length === 1 ? "sang" : "sanger"}`;
   header.append(meta);
   ui.setlistDetail.append(header);
 
-  if (!setlist.songs.length) {
+  if (!setlist.items.length) {
     const empty = document.createElement("p");
     empty.className = "muted";
-    empty.textContent = "Set-listen er tom. Velg Rediger for å legge til sanger.";
+    empty.textContent = "Set-listen er tom. Velg Rediger for å legge til sanger eller deler.";
     ui.setlistDetail.append(empty);
     return;
   }
 
-  const list = document.createElement("ol");
-  list.className = "setlist-read-list";
-  setlist.songs.forEach(songId => {
-    const song = songById.get(songId);
-    const item = document.createElement("li");
+  const content = document.createElement("div");
+  content.className = "setlist-read-sequence";
+  let list = null;
+  let numberWithinPart = 0;
+
+  const ensureList = () => {
+    if (list) return list;
+    list = document.createElement("ol");
+    list.className = "setlist-read-list";
+    content.append(list);
+    return list;
+  };
+
+  for (const item of setlist.items) {
+    if (item.type === "part") {
+      const heading = document.createElement("h2");
+      heading.className = "setlist-part-heading";
+      heading.textContent = item.name;
+      content.append(heading);
+      list = null;
+      numberWithinPart = 0;
+      continue;
+    }
+
+    numberWithinPart += 1;
+    const song = songById.get(item.songId);
+    const row = document.createElement("li");
+    row.value = numberWithinPart;
     if (song) {
       const button = document.createElement("button");
       button.type = "button";
@@ -366,16 +390,16 @@ function renderSetlist(setlist) {
         renderSongList();
         renderSong(song);
       });
-      item.append(button);
+      row.append(button);
     } else {
-      item.className = "setlist-missing-song";
-      item.textContent = `Mangler sang: ${songId}`;
+      row.className = "setlist-missing-song";
+      row.textContent = `Mangler sang: ${item.songId}`;
     }
-    list.append(item);
-  });
-  ui.setlistDetail.append(list);
-}
+    ensureList().append(row);
+  }
 
+  ui.setlistDetail.append(content);
+}
 function beginEditSetlist(setlist) {
   editingSetlist = setlist;
   const draft = structuredClone(setlist);

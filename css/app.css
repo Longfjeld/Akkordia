@@ -656,3 +656,39 @@ button:disabled { cursor: default; opacity: 0.55; }
     justify-content: flex-end;
   }
 }
+
+
+/* Milestone 5.1: set-list parts */
+.setlist-read-sequence {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+.setlist-read-sequence .setlist-read-list {
+  margin-top: 0;
+}
+.setlist-part-heading {
+  margin: 0.8rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-top: 2px solid #59636e;
+  border-bottom: 1px solid #d8dee4;
+  font-size: 1rem;
+  letter-spacing: 0.025em;
+}
+.setlist-entry-part {
+  border-color: #b7bec6;
+  background: #f6f7f8;
+}
+.setlist-entry-part .setlist-entry-label {
+  display: block;
+}
+.setlist-part-name {
+  width: 100%;
+  min-width: 8rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #b7bec6;
+  border-radius: 0.4rem;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+}
