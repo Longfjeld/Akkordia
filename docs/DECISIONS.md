@@ -482,3 +482,81 @@ Status: Accepted
 ### Beslutning
 
 Valg mellom `vocal`, `harmony` og `both` lagres i `localStorage` og endrer ikke sangfilene.
+
+# DECISIONS – tillegg for Milestone 3
+
+## ADR-0032 – Eksplisitt lagring, ikke autosave
+
+Status: Accepted
+
+### Beslutning
+
+Redigering lagres først når brukeren velger `Lagre`.
+
+### Begrunnelse
+
+Dette gir enklere kode, færre Graph-kall og en tydeligere konfliktmodell ved samtidig redigering.
+
+---
+
+## ADR-0033 – ETag brukes ved oppdatering av sang
+
+Status: Accepted
+
+### Beslutning
+
+Eksisterende sangfiler lagres med `If-Match` mot ETag som ble lest sammen med filen.
+
+### Begrunnelse
+
+Akkordia skal ikke stille overskrive endringer gjort av en annen bruker.
+
+---
+
+## ADR-0034 – Sangfilnavn følger stabil sang-ID
+
+Status: Accepted
+
+### Beslutning
+
+Nye filer får filnavn:
+
+```text
+<song-id>.json
+```
+
+Sangtittel brukes ikke som filnavn.
+
+### Begrunnelse
+
+Tittel kan endres uten rename-operasjon, og filreferansen forblir stabil.
+
+---
+
+## ADR-0035 – Første editor er strukturert, ikke grafisk
+
+Status: Accepted
+
+### Beslutning
+
+Milestone 3 redigerer akkordposisjon eksplisitt som tegnposisjon.
+
+Grafisk plassering av akkorder direkte over tekst er utsatt.
+
+### Begrunnelse
+
+Første mål er korrekt og stabil skriving av hele Song schema v1 med minst mulig kjørekode. UI-et kan forbedres senere uten dataformatendring.
+
+---
+
+## ADR-0036 – Sletting av sang utsettes
+
+Status: Accepted
+
+### Beslutning
+
+Milestone 3 kan opprette og endre sanger, men ikke slette dem.
+
+### Begrunnelse
+
+Sletting er en destruktiv operasjon og bør få egen UX og testmodell.

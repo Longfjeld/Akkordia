@@ -41,3 +41,37 @@ export async function getFileJson(driveId, itemId) {
   );
   return response.json();
 }
+
+export async function putFileJson(driveId, itemId, value, eTag = null) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    Accept: "application/json"
+  };
+  if (eTag) headers["If-Match"] = eTag;
+
+  const response = await graphFetch(
+    `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}/content`,
+    {
+      method: "PUT",
+      headers,
+      body: `${JSON.stringify(value, null, 2)}\n`
+    }
+  );
+  return response.json();
+}
+
+export async function createFileJson(driveId, parentItemId, filename, value) {
+  const response = await graphFetch(
+    `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(parentItemId)}:/${encodeURIComponent(filename)}:/content`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Accept: "application/json",
+        "If-None-Match": "*"
+      },
+      body: `${JSON.stringify(value, null, 2)}\n`
+    }
+  );
+  return response.json();
+}
