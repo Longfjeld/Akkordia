@@ -31,10 +31,34 @@
         <button id="connectWorkspace" type="button">Koble til band</button>
         <button id="createWorkspace" type="button" class="secondary" disabled>Opprett nytt band</button>
       </div>
-      <p class="notice">Oppretting av nye band kommer i neste trinn.</p>
+      <p class="notice">Oppretting av nye band kommer i et senere trinn.</p>
     </section>
 
-    <section id="workspaceStatus" class="panel hidden" aria-live="polite"></section>
+    <section id="workspaceStatus" class="panel status-panel hidden" aria-live="polite"></section>
+
+    <section id="songsView" class="songs-layout hidden">
+      <aside class="song-library" aria-label="Sangbibliotek">
+        <div class="library-header">
+          <h1>Sanger</h1>
+          <label class="lyrics-view-control">
+            <span>Vis</span>
+            <select id="lyricsView">
+              <option value="both">Vokal + koring</option>
+              <option value="vocal">Vokal</option>
+              <option value="harmony">Koring</option>
+            </select>
+          </label>
+        </div>
+        <div id="songListMessage" class="message hidden" aria-live="polite"></div>
+        <div id="songList" class="song-list"></div>
+      </aside>
+
+      <article id="songDetail" class="song-detail">
+        <div class="song-placeholder">
+          <p>Velg en sang fra biblioteket.</p>
+        </div>
+      </article>
+    </section>
   </main>
 
   <dialog id="folderDialog" class="folder-dialog">

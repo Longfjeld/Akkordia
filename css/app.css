@@ -99,3 +99,115 @@ button:disabled { cursor: default; opacity: 0.55; }
   .empty-state { margin-top: 1rem; }
   .folder-toolbar { flex-direction: column; }
 }
+
+/* Milestone 2: song library and read-only song view */
+.status-panel {
+  max-width: 70rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+}
+.status-panel.error { background: #fff1f0; }
+
+.songs-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.song-library,
+.song-detail {
+  background: #fff;
+  border: 1px solid #d8dee4;
+  border-radius: 0.75rem;
+}
+
+.song-library {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+}
+
+.library-header {
+  padding: 1rem;
+  border-bottom: 1px solid #d8dee4;
+}
+.library-header h1 { margin: 0 0 0.9rem; font-size: 1.2rem; }
+.lyrics-view-control { display: grid; gap: 0.3rem; font-size: 0.9rem; }
+.lyrics-view-control select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.45rem;
+  background: #fff;
+  font: inherit;
+}
+
+.song-library .message { margin: 0.75rem; }
+.song-list { border-top: 1px solid #eef0f2; }
+.song-row {
+  display: block;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-bottom: 1px solid #eef0f2;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+}
+.song-row:hover { background: #f6f7f8; }
+.song-row.is-selected { background: #eef1f4; font-weight: 650; }
+
+.song-detail {
+  min-height: 28rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  overflow-x: auto;
+}
+.song-placeholder { color: #59636e; }
+.song-header { padding-bottom: 1rem; border-bottom: 1px solid #d8dee4; }
+.song-header h1 { margin: 0; }
+.chord-set { margin-bottom: 0; }
+
+.song-section {
+  margin-top: 1.5rem;
+  padding-top: 0.25rem;
+  border-top: 3px solid #d8dee4;
+}
+.song-section h2 {
+  margin: 0 0 1rem;
+  padding-top: 0.6rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.song-line {
+  min-width: 34ch;
+  margin: 0 0 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.35;
+}
+.chord-line {
+  position: relative;
+  height: 1.35em;
+  white-space: pre;
+  color: #8a3d00;
+  font-weight: 700;
+}
+.chord {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+.lyric { white-space: pre; min-height: 1.35em; }
+.harmony { font-style: italic; color: #586069; }
+
+@media (max-width: 760px) {
+  .app-main { padding: 1rem 0.75rem; }
+  .songs-layout { grid-template-columns: 1fr; }
+  .song-library { position: static; max-height: none; }
+  .song-list { max-height: 14rem; overflow: auto; }
+  .song-detail { min-height: 20rem; }
+}

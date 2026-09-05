@@ -27,9 +27,10 @@ Foreslått registrering:
 |Innstilling|Verdi|
 |:---|:---|
 |Navn|`Akkordia`|
-|Kontotype|Personal Microsoft accounts|
+|Kontotype|Any Entra ID Tenant +  Personal Microsoft accounts|
 |Plattform|Single-page application (SPA)|
 |Produksjons-redirect|`https://longfjeld.github.io/Akkordia/`|
+|Application Client ID| 9ec284d6-9099-4b14-b260-50152bb88bc9|
 
 For lokal utvikling legges en lokal HTTPS/HTTP redirect URI til når lokal utviklingsserver er bestemt.
 

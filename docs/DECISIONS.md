@@ -432,3 +432,53 @@ Akkordia lister mapper direkte med Microsoft Graph i stedet for å introdusere e
 ### Begrunnelse
 
 Dette krever lite kode, gir full kontroll over workspace-valideringen og kan senere utvides med delte elementer dersom behovet krever det.
+
+# DECISIONS – Milestone 2 tillegg
+
+## ADR-0029 – Sangbiblioteket leser individuelle JSON-filer direkte
+
+Status: Accepted
+
+### Beslutning
+
+Milestone 2 lister JSON-filene i `songs/` og leser hver sangfil direkte.
+
+Det innføres ikke `index.json`.
+
+### Begrunnelse
+
+Dette følger tidligere beslutning om å prioritere enkel kjørekode og eksplisitte data fremfor ekstra indeks- og synkroniseringslogikk.
+
+---
+
+## ADR-0030 – Ugyldig enkeltfil stopper ikke sangbiblioteket
+
+Status: Accepted
+
+### Beslutning
+
+Sangfiler lastes uavhengig. En ugyldig fil rapporteres, mens øvrige gyldige sanger fortsatt vises.
+
+---
+
+## ADR-0031 – Akkordposisjon rendres med `ch`
+
+Status: Accepted
+
+### Beslutning
+
+`chord.pos` behandles som tegnposisjon og vises i monospace-layout med CSS-enheten `ch`.
+
+### Begrunnelse
+
+Dette tilsvarer eksisterende datamodell og krever svært lite kjørekode.
+
+---
+
+## ADR-0032 – Vokal/koring-visning er lokal preferanse
+
+Status: Accepted
+
+### Beslutning
+
+Valg mellom `vocal`, `harmony` og `both` lagres i `localStorage` og endrer ikke sangfilene.
