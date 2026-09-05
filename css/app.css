@@ -323,3 +323,174 @@ button:disabled { cursor: default; opacity: 0.55; }
   .editor-toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
   .chord-editor-row { grid-template-columns: 1fr 7rem auto; }
 }
+
+/* Milestone 4: visual chord editor */
+.chord-palette-card {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 8;
+  box-shadow: 0 2px 10px rgb(31 35 40 / 8%);
+}
+.chord-palette-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+.chord-palette-title,
+.chord-inspector-title {
+  font-weight: 700;
+}
+.chord-palette-help {
+  font-size: 0.85rem;
+}
+.chord-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-height: 2.2rem;
+  align-items: center;
+}
+.palette-chord,
+.placed-chord {
+  border: 1px solid #b65c00;
+  border-radius: 0.45rem;
+  background: #fff8f0;
+  color: #7a3500;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.palette-chord {
+  padding: 0.42rem 0.62rem;
+}
+.palette-chord:active,
+.placed-chord:active {
+  cursor: grabbing;
+}
+.visual-line-editor {
+  overflow: hidden;
+}
+.visual-line {
+  overflow-x: auto;
+  padding: 0.2rem 0 0.45rem;
+  -webkit-overflow-scrolling: touch;
+}
+.chord-drop-zone {
+  position: relative;
+  min-width: 32ch;
+  max-width: none;
+  padding: 0.35rem 0.2rem 0.4rem;
+  border: 1px dashed #c7cdd3;
+  border-radius: 0.45rem;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.35;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.chord-drop-zone.is-drag-target {
+  border-color: #b65c00;
+  background: #fff8f0;
+}
+.chord-position-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  background-image: repeating-linear-gradient(
+    to right,
+    currentColor 0,
+    currentColor 1px,
+    transparent 1px,
+    transparent 1ch
+  );
+}
+.editor-chord-track {
+  position: relative;
+  height: 2rem;
+  min-width: 32ch;
+}
+.placed-chord {
+  position: absolute;
+  top: 0.1rem;
+  padding: 0.22rem 0.35rem;
+  transform: translateX(-0.15rem);
+  z-index: 2;
+}
+.placed-chord.is-selected {
+  outline: 2px solid #1f6feb;
+  outline-offset: 1px;
+}
+.visual-lyric {
+  position: relative;
+  min-height: 1.35em;
+  white-space: pre;
+  z-index: 1;
+}
+.visual-harmony {
+  color: #586069;
+  font-style: italic;
+}
+.chord-inspector {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(10rem, 1fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+  padding: 0.7rem;
+  border: 1px solid #b6d1f2;
+  border-radius: 0.5rem;
+  background: #f6faff;
+}
+.chord-inspector-title {
+  grid-column: 1 / -1;
+}
+.position-controls {
+  display: grid;
+  grid-template-columns: auto minmax(4.5rem, 1fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+.position-step {
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  font-size: 1.1rem;
+  padding: 0.35rem 0.55rem;
+}
+.chord-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  pointer-events: none;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid #b65c00;
+  border-radius: 0.4rem;
+  background: #fff8f0;
+  color: #7a3500;
+  box-shadow: 0 4px 14px rgb(31 35 40 / 18%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .chord-palette-card {
+    top: 0.25rem;
+  }
+  .chord-palette-header {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .chord-inspector {
+    grid-template-columns: 1fr;
+  }
+  .chord-inspector-title {
+    grid-column: auto;
+  }
+  .visual-line {
+    margin-inline: -0.15rem;
+  }
+}

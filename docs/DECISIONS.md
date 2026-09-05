@@ -560,3 +560,71 @@ Milestone 3 kan opprette og endre sanger, men ikke slette dem.
 ### Begrunnelse
 
 Sletting er en destruktiv operasjon og bør få egen UX og testmodell.
+
+# DECISIONS – tillegg Milestone 4
+
+## ADR-0032 – Visuell akkordplassering bruker eksisterende `chord.pos`
+
+Status: Accepted
+
+### Beslutning
+
+Dra-og-slipp skal ikke introdusere en egen pikselposisjon eller separat layoutmodell.
+
+Når en akkord slippes, konverteres pekerposisjonen direkte til nærmeste heltallsbaserte tegnposisjon og lagres i eksisterende `chord.pos`.
+
+### Begrunnelse
+
+Dette bevarer Song schema v1 og gjør vanlig visning, visuell redigering og numerisk finjustering til tre grensesnitt mot samme data.
+
+---
+
+## ADR-0033 – Dra og numerisk finjustering skal eksistere samtidig
+
+Status: Accepted
+
+### Beslutning
+
+Dra-og-slipp er primær metode for rask plassering.
+
+Valgt akkord kan i tillegg finjusteres med:
+
+```text
+numerisk posisjonsfelt
+− ett tegn
++ ett tegn
+```
+
+### Begrunnelse
+
+Visuell plassering er rask, mens heltallsposisjon gir presis kontroll uten mer data- eller synkroniseringslogikk.
+
+---
+
+## ADR-0034 – Pointer Events brukes for visuell akkordflytting
+
+Status: Accepted
+
+### Beslutning
+
+Editoren bruker Pointer Events (`pointerdown`, `pointermove`, `pointerup`) i stedet for å basere seg på klassisk HTML5 drag-and-drop.
+
+### Begrunnelse
+
+Akkordia skal brukes med mus/trackpad på Mac og touch på iPhone/iPad/Android. Én pekerbasert implementasjon reduserer plattformspesifikk kode.
+
+---
+
+## ADR-0035 – Akkordpaletten er avledet direkte fra `chordSet`
+
+Status: Accepted
+
+### Beslutning
+
+Den visuelle akkordpaletten rendres direkte fra sangens eksplisitte `chordSet`.
+
+Paletten har ikke egen lagringsmodell.
+
+### Begrunnelse
+
+`chordSet` er allerede autoritativt sangdata. En separat palettmodell ville introdusert unødvendig kode og risiko for inkonsistens.
