@@ -928,3 +928,14 @@ body.is-playing .play-view { display: block !important; }
   background: #fff7e6;
   color: #6b4400;
 }
+
+
+/* Milestone 7.1: reduce accidental double-tap zoom on controls */
+button,
+input,
+select,
+textarea,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}

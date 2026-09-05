@@ -1,4 +1,4 @@
-const CACHE_NAME = "akkordia-shell-m7-v1";
+const CACHE_NAME = "akkordia-shell-m7-1-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -17,7 +17,9 @@ const APP_SHELL = [
   "./js/storage.js",
   "./js/workspaces.js",
   "./vendor/msal-browser.min.js",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png"
 ];
 
 self.addEventListener("install", event => {
