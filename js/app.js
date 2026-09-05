@@ -6,9 +6,11 @@ import { cloneSong, renderSongEditor } from "./editor.js";
 import { createSetlist, getActiveSetlistId, loadSetlists, saveSetlist, setActiveSetlistId } from "./setlists.js";
 import { renderSetlistEditor } from "./setlist-editor.js";
 import { createPlayer } from "./player.js";
+import { getWorkspaceSnapshot, updateWorkspaceSnapshot } from "./offline.js";
 
 const ui = {
   accountButton: document.querySelector("#accountButton"),
+  connectionStatus: document.querySelector("#connectionStatus"),
   workspaceButton: document.querySelector("#workspaceButton"),
   connectWorkspace: document.querySelector("#connectWorkspace"),
   workspaceStatus: document.querySelector("#workspaceStatus"),
@@ -44,16 +46,32 @@ let selectedSetlistId = null;
 let editingSetlist = null;
 let activeView = "songs";
 let currentPlayer = null;
+let songsReadOnly = true;
+let setlistsReadOnly = true;
 
 async function start() {
+  let authError = null;
   try {
     await initializeAuth();
-    renderHeader();
-    ui.lyricsView.value = getLyricsView();
-    renderView();
-    if (getAccount() && getActiveWorkspace()) await refreshSongs();
   } catch (error) {
-    showStatus(`Autentisering kunne ikke initialiseres: ${error.message}`, true);
+    authError = error;
+  }
+
+  renderHeader();
+  renderConnectivity();
+  ui.lyricsView.value = getLyricsView();
+  renderView();
+  await registerServiceWorker();
+
+  const workspace = getActiveWorkspace();
+  if (workspace) {
+    await refreshSongs();
+    if (navigator.onLine && getAccount()) await primeSetlistsForOffline();
+  }
+
+  if (authError) {
+    if (navigator.onLine) showStatus(`Autentisering kunne ikke initialiseres: ${authError.message}`, true);
+    else showStatus("Offline · viser sist lagrede data dersom de finnes.", false);
   }
 }
 
@@ -77,33 +95,137 @@ function renderView() {
     button.classList.toggle("is-active", button.dataset.view === activeView);
   });
 
-  if (workspace && activeView === "play") {
+  if (workspace && !navigator.onLine) {
+    showStatus(`Offline · ${workspace.name} · kun lesing`, false);
+  } else if (workspace && activeView === "play") {
     showStatus(`Spill · ${workspace.name}`, false);
   } else if (workspace) {
     showStatus(`Aktivt band: ${workspace.name}`, false);
   }
 }
 
+function canWrite() {
+  return navigator.onLine && Boolean(getAccount());
+}
+
+function canWriteSongs() {
+  return canWrite() && !songsReadOnly;
+}
+
+function canWriteSetlists() {
+  return canWrite() && !setlistsReadOnly;
+}
+
+function renderConnectivity() {
+  const online = navigator.onLine;
+  ui.connectionStatus.textContent = online ? "Online" : "Offline · kun lesing";
+  ui.connectionStatus.classList.toggle("is-offline", !online);
+  ui.accountButton.disabled = !online;
+  ui.connectWorkspace.disabled = !online;
+  ui.newSongButton.disabled = !canWriteSongs();
+  ui.newSetlistButton.disabled = !canWriteSetlists();
+
+  if (!online) {
+    showStatus("Offline · bruker sist lagrede data. Redigering er deaktivert.", false);
+  }
+}
+
+async function primeSetlistsForOffline() {
+  const workspace = getActiveWorkspace();
+  if (!workspace || !navigator.onLine || !getAccount()) return;
+
+  try {
+    const result = await loadSetlists(workspace);
+    setlists = result.setlists;
+    setlistsReadOnly = false;
+    await updateWorkspaceSnapshot(workspace.workspaceId, { setlists: result.setlists });
+    renderConnectivity();
+  } catch (error) {
+    console.info("Kunne ikke forhåndslagre set-lister for offline-bruk:", error);
+  }
+}
+
+async function loadSetlistsForCurrentMode() {
+  const workspace = getActiveWorkspace();
+  if (!workspace) return;
+
+  if (navigator.onLine && getAccount()) {
+    try {
+      const result = await loadSetlists(workspace);
+      setlists = result.setlists;
+      setlistsReadOnly = false;
+      await updateWorkspaceSnapshot(workspace.workspaceId, { setlists });
+      renderConnectivity();
+      return;
+    } catch (error) {
+      console.warn("Online lasting av set-lister feilet. Prøver offline-cache:", error);
+    }
+  }
+
+  const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+  if (!cached?.hasSetlists) {
+    throw new Error("Ingen offline-cache for set-lister er tilgjengelig.");
+  }
+  setlists = cached.setlists;
+  setlistsReadOnly = true;
+  renderConnectivity();
+}
+
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+  } catch (error) {
+    console.info("Service worker kunne ikke registreres:", error);
+  }
+}
+
 async function refreshSongs() {
   const workspace = getActiveWorkspace();
-  if (!workspace || !getAccount()) return;
+  if (!workspace) return;
 
   editingSong = null;
-  setSongListMessage("Laster sanger …");
+  setSongListMessage(navigator.onLine ? "Laster sanger …" : "Laster offline-data …");
   ui.songList.replaceChildren();
   ui.songDetail.replaceChildren();
 
   try {
-    const result = await loadSongs(workspace);
+    let result;
+    let source = "online";
+
+    if (navigator.onLine && getAccount()) {
+      try {
+        result = await loadSongs(workspace);
+        await updateWorkspaceSnapshot(workspace.workspaceId, { songs: result.songs });
+      } catch (error) {
+        const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+        if (!cached?.hasSongs) throw error;
+        result = { songs: cached.songs, errors: [] };
+        source = "cache";
+        console.warn("Online lasting av sanger feilet. Bruker offline-cache:", error);
+      }
+    } else {
+      const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+      if (!cached?.hasSongs) {
+        throw new Error("Ingen offline-cache for sanger er tilgjengelig. Koble til nett og åpne bandet minst én gang.");
+      }
+      result = { songs: cached.songs, errors: [] };
+      source = "cache";
+    }
+
     songs = result.songs;
+    songsReadOnly = source === "cache";
+    renderConnectivity();
     renderSongList();
 
     if (!songs.length) setSongListMessage("Ingen gyldige sangfiler ble funnet.");
-    else if (result.errors.length) {
+    else if (source === "cache") {
+      setSongListMessage(`${songs.length} sanger lastet fra offline-cache · kun lesing.`);
+    } else if (result.errors.length) {
       setSongListMessage(`${songs.length} sanger lastet. ${result.errors.length} fil(er) kunne ikke leses.`, true);
       console.warn("Sangfiler som ikke kunne leses:", result.errors);
     } else {
-      setSongListMessage(`${songs.length} sanger lastet.`);
+      setSongListMessage(`${songs.length} sanger lastet fra OneDrive.`);
     }
 
     if (selectedSongId && songs.some(song => song.id === selectedSongId)) {
@@ -112,6 +234,8 @@ async function refreshSongs() {
       renderSongPlaceholder();
     }
   } catch (error) {
+    songsReadOnly = true;
+    renderConnectivity();
     setSongListMessage(error.message, true);
   }
 }
@@ -150,6 +274,8 @@ function renderSong(song) {
   edit.type = "button";
   edit.className = "secondary";
   edit.textContent = "Rediger";
+  edit.disabled = !canWriteSongs();
+  if (!canWriteSongs()) edit.title = "Redigering krever en oppdatert online-versjon av sangbiblioteket.";
   edit.addEventListener("click", () => beginEdit(song));
   headingRow.append(title, edit);
   header.append(headingRow);
@@ -220,6 +346,10 @@ function renderSongLine(line, view) {
 }
 
 function beginEdit(song) {
+  if (!canWriteSongs()) {
+    showStatus("Sangbiblioteket er i lesemodus. Koble til nett og oppdater data før redigering.", true);
+    return;
+  }
   editingSong = song;
   const draft = cloneSong(song);
   renderSongEditor(ui.songDetail, draft, {
@@ -232,6 +362,10 @@ function beginEdit(song) {
 }
 
 function beginNewSong() {
+  if (!canWriteSongs()) {
+    showStatus("Nye sanger krever en aktiv, oppdatert OneDrive-tilkobling.", true);
+    return;
+  }
   if (editingSong && !confirm("Avslutte redigering uten å lagre?")) return;
   const draft = createSong();
   editingSong = draft;
@@ -247,6 +381,7 @@ function beginNewSong() {
 }
 
 async function saveDraft(draft, existingSong) {
+  if (!canWriteSongs()) throw new Error("Sangen kan ikke lagres før biblioteket er oppdatert fra OneDrive.");
   const workspace = getActiveWorkspace();
   if (!workspace) throw new Error("Ingen workspace er valgt.");
 
@@ -262,6 +397,9 @@ async function saveDraft(draft, existingSong) {
   songs.sort((a, b) => a.title.localeCompare(b.title, "nb", { sensitivity: "base" }));
   selectedSongId = draft.id;
   editingSong = null;
+  await updateWorkspaceSnapshot(workspace.workspaceId, { songs });
+  songsReadOnly = false;
+  renderConnectivity();
   renderSongList();
   renderSong(draft);
   setSongListMessage(`${songs.length} sanger lastet.`);
@@ -270,31 +408,59 @@ async function saveDraft(draft, existingSong) {
 
 async function refreshSetlists() {
   const workspace = getActiveWorkspace();
-  if (!workspace || !getAccount()) return;
+  if (!workspace) return;
 
   editingSetlist = null;
-  setSetlistListMessage("Laster set-lister …");
+  setSetlistListMessage(navigator.onLine ? "Laster set-lister …" : "Laster offline-data …");
   ui.setlistList.replaceChildren();
   ui.setlistDetail.replaceChildren();
 
   try {
-    const result = await loadSetlists(workspace);
+    let result;
+    let source = "online";
+
+    if (navigator.onLine && getAccount()) {
+      try {
+        result = await loadSetlists(workspace);
+        await updateWorkspaceSnapshot(workspace.workspaceId, { setlists: result.setlists });
+      } catch (error) {
+        const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+        if (!cached?.hasSetlists) throw error;
+        result = { setlists: cached.setlists, errors: [] };
+        source = "cache";
+        console.warn("Online lasting av set-lister feilet. Bruker offline-cache:", error);
+      }
+    } else {
+      const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+      if (!cached?.hasSetlists) {
+        throw new Error("Ingen offline-cache for set-lister er tilgjengelig. Koble til nett og åpne bandet minst én gang.");
+      }
+      result = { setlists: cached.setlists, errors: [] };
+      source = "cache";
+    }
+
     setlists = result.setlists;
+    setlistsReadOnly = source === "cache";
+    renderConnectivity();
     const preferred = selectedSetlistId ?? getActiveSetlistId(workspace.workspaceId);
     selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
     renderSetlistList();
 
     if (!setlists.length) setSetlistListMessage("Ingen set-lister er opprettet ennå.");
-    else if (result.errors.length) {
+    else if (source === "cache") {
+      setSetlistListMessage(`${setlists.length} set-lister lastet fra offline-cache · kun lesing.`);
+    } else if (result.errors.length) {
       setSetlistListMessage(`${setlists.length} set-lister lastet. ${result.errors.length} fil(er) kunne ikke leses.`, true);
       console.warn("Set-listfiler som ikke kunne leses:", result.errors);
     } else {
-      setSetlistListMessage(`${setlists.length} set-lister lastet.`);
+      setSetlistListMessage(`${setlists.length} set-lister lastet fra OneDrive.`);
     }
 
     if (selectedSetlistId) renderSetlist(setlists.find(item => item.id === selectedSetlistId));
     else renderSetlistPlaceholder();
   } catch (error) {
+    setlistsReadOnly = true;
+    renderConnectivity();
     setSetlistListMessage(error.message, true);
     renderSetlistPlaceholder();
   }
@@ -345,6 +511,8 @@ function renderSetlist(setlist) {
   edit.type = "button";
   edit.className = "secondary";
   edit.textContent = "Rediger";
+  edit.disabled = !canWriteSetlists();
+  if (!canWriteSetlists()) edit.title = "Redigering krever en oppdatert online-versjon av set-listene.";
   edit.addEventListener("click", () => beginEditSetlist(setlist));
   actions.append(play, edit);
   headingRow.append(title, actions);
@@ -415,6 +583,10 @@ function renderSetlist(setlist) {
   ui.setlistDetail.append(content);
 }
 function beginEditSetlist(setlist) {
+  if (!canWriteSetlists()) {
+    showStatus("Set-listene er i lesemodus. Koble til nett og oppdater data før redigering.", true);
+    return;
+  }
   editingSetlist = setlist;
   const draft = structuredClone(setlist);
   renderSetlistEditor(ui.setlistDetail, draft, songs, {
@@ -427,6 +599,10 @@ function beginEditSetlist(setlist) {
 }
 
 function beginNewSetlist() {
+  if (!canWriteSetlists()) {
+    showStatus("Nye set-lister krever en aktiv, oppdatert OneDrive-tilkobling.", true);
+    return;
+  }
   if (editingSetlist && !confirm("Avslutte redigering uten å lagre?")) return;
   const draft = createSetlist();
   editingSetlist = draft;
@@ -442,6 +618,7 @@ function beginNewSetlist() {
 }
 
 async function saveSetlistDraft(draft, existingSetlist) {
+  if (!canWriteSetlists()) throw new Error("Set-listen kan ikke lagres før data er oppdatert fra OneDrive.");
   const workspace = getActiveWorkspace();
   if (!workspace) throw new Error("Ingen workspace er valgt.");
 
@@ -458,6 +635,9 @@ async function saveSetlistDraft(draft, existingSetlist) {
   selectedSetlistId = draft.id;
   setActiveSetlistId(workspace.workspaceId, draft.id);
   editingSetlist = null;
+  await updateWorkspaceSnapshot(workspace.workspaceId, { setlists });
+  setlistsReadOnly = false;
+  renderConnectivity();
   renderSetlistList();
   renderSetlist(draft);
   setSetlistListMessage(`${setlists.length} set-lister lastet.`);
@@ -465,13 +645,12 @@ async function saveSetlistDraft(draft, existingSetlist) {
 }
 
 async function preparePlayView() {
-  if (!getActiveWorkspace() || !getAccount() || currentPlayer) return;
+  if (!getActiveWorkspace() || currentPlayer) return;
 
   ui.playContent.innerHTML = '<div class="player-empty"><p>Laster set-lister …</p></div>';
   try {
     if (!setlists.length) {
-      const result = await loadSetlists(getActiveWorkspace());
-      setlists = result.setlists;
+      await loadSetlistsForCurrentMode();
       const preferred = selectedSetlistId ?? getActiveSetlistId(getActiveWorkspace().workspaceId);
       selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
     }
@@ -578,6 +757,7 @@ function renderSongPlaceholder() {
 }
 
 ui.accountButton.addEventListener("click", async () => {
+  if (!navigator.onLine) return;
   try {
     if (getAccount() && (editingSong || editingSetlist) && !confirm("Avslutte redigering uten å lagre?")) return;
     if (getAccount()) await signOut();
@@ -588,6 +768,10 @@ ui.accountButton.addEventListener("click", async () => {
 });
 
 ui.connectWorkspace.addEventListener("click", async () => {
+  if (!navigator.onLine) {
+    showStatus("Offline · du kan ikke koble til et nytt band.", true);
+    return;
+  }
   try {
     if (!getAccount()) {
       await signIn();
@@ -634,6 +818,7 @@ ui.selectFolder.addEventListener("click", async () => {
     renderHeader();
     renderView();
     await refreshSongs();
+    await primeSetlistsForOffline();
     showStatus(`Bandet «${workspace.name}» er koblet til og klart.`, false);
   } catch (error) {
     setFolderMessage(error.message, true);
@@ -732,9 +917,43 @@ document.querySelectorAll("[data-view]").forEach(button => {
     if (activeView === "play" && nextView !== "play") stopPlayer();
     activeView = nextView;
     renderView();
-    if (activeView === "setlists" && getActiveWorkspace() && getAccount()) await refreshSetlists();
-    if (activeView === "play" && getActiveWorkspace() && getAccount()) await preparePlayView();
+    if (activeView === "songs" && getActiveWorkspace() && navigator.onLine && songsReadOnly) await refreshSongs();
+    if (activeView === "setlists" && getActiveWorkspace()) await refreshSetlists();
+    if (activeView === "play" && getActiveWorkspace()) await preparePlayView();
   });
+});
+
+window.addEventListener("online", async () => {
+  renderConnectivity();
+  renderHeader();
+  const workspace = getActiveWorkspace();
+  if (!workspace) return;
+
+  if (!editingSong && activeView === "songs") {
+    await refreshSongs();
+  }
+  if (!editingSetlist && activeView === "setlists") {
+    await refreshSetlists();
+  } else if (activeView !== "setlists") {
+    await primeSetlistsForOffline();
+  }
+
+  showStatus("Online igjen · data er oppdatert fra OneDrive.", false);
+});
+
+window.addEventListener("offline", () => {
+  renderConnectivity();
+  if (!editingSong && activeView === "songs" && selectedSongId) {
+    const song = songs.find(item => item.id === selectedSongId);
+    if (song) renderSong(song);
+  }
+  if (!editingSetlist && activeView === "setlists" && selectedSetlistId) {
+    const setlist = setlists.find(item => item.id === selectedSetlistId);
+    if (setlist) renderSetlist(setlist);
+  }
+  if (editingSong || editingSetlist) {
+    showStatus("Nettforbindelsen er borte. Åpen redigering kan ikke lagres før du er online igjen.", true);
+  }
 });
 
 window.addEventListener("beforeunload", event => {

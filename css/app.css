@@ -908,3 +908,23 @@ body.is-playing .play-view { display: block !important; }
   border-radius: 0.5rem;
   font: 0.95rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
+
+
+/* Milestone 7: connection and offline state */
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #b7bec6;
+  border-radius: 999px;
+  background: #f6f7f8;
+  color: #42526b;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.connection-status.is-offline {
+  border-color: #d8a35d;
+  background: #fff7e6;
+  color: #6b4400;
+}

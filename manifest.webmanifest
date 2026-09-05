@@ -1,0 +1,10 @@
+{
+  "name": "Akkordia",
+  "short_name": "Akkordia",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "nb"
+}

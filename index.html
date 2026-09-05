@@ -4,7 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Akkordia">
   <title>Akkordia</title>
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./css/app.css">
   <script src="./vendor/msal-browser.min.js"></script>
 </head>
@@ -12,6 +15,7 @@
   <header class="app-header">
     <div class="brand">Akkordia</div>
     <div class="header-actions">
+      <span id="connectionStatus" class="connection-status" aria-live="polite">Online</span>
       <button id="workspaceButton" class="workspace-button" type="button">Ingen band valgt</button>
       <button id="accountButton" class="account-button" type="button">Logg inn</button>
     </div>
