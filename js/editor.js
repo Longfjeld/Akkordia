@@ -84,6 +84,14 @@ export function renderSongEditor(container, draft, { onSave, onCancel }) {
     }
   });
 
+  const importRow = el("div", "editor-import-row");
+  const importTextButton = button("Importer tekst", "secondary");
+  importTextButton.addEventListener("click", () => openTextImportDialog());
+  const importHelp = el("span", "muted");
+  importHelp.textContent = "Lim inn hele sangteksten med [Vers 1], [Chorus], [Bridge] osv. som seksjonsmarkører.";
+  importRow.append(importTextButton, importHelp);
+  basics.append(importRow);
+
   editor.append(basics);
 
   const paletteCard = el("section", "editor-card chord-palette-card");
@@ -123,6 +131,71 @@ export function renderSongEditor(container, draft, { onSave, onCancel }) {
       cancel.disabled = false;
     }
   });
+
+  function openTextImportDialog() {
+    const dialog = document.createElement("dialog");
+    dialog.className = "text-import-dialog";
+
+    const form = document.createElement("form");
+    form.method = "dialog";
+    form.className = "text-import-form";
+
+    const title = el("h2");
+    title.textContent = "Importer sangtekst";
+
+    const help = el("p", "muted");
+    help.textContent = "Lim inn ren tekst. Bruk markører som [Vers 1], [Chorus], [Bridge], [Intro] eller [Interlude]. Uten markør importeres teksten som Vers 1.";
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "text-import-area";
+    textarea.rows = 18;
+    textarea.placeholder = `[Vers 1]
+Første linje
+Andre linje
+
+[Chorus]
+Første refrenglinje
+Andre refrenglinje`;
+
+    const importMessage = el("div", "message hidden");
+    importMessage.setAttribute("aria-live", "polite");
+
+    const actions = el("div", "editor-toolbar-actions");
+    const cancelImport = button("Avbryt", "secondary");
+    const applyImport = button("Importer", "primary");
+    actions.append(cancelImport, applyImport);
+
+    cancelImport.addEventListener("click", () => dialog.close());
+    applyImport.addEventListener("click", () => {
+      try {
+        const raw = textarea.value;
+        if (!raw.trim()) throw new Error("Lim inn sangtekst før du importerer.");
+
+        const imported = parseSongText(raw);
+        if (!imported.length) throw new Error("Fant ingen tekst å importere.");
+
+        if (hasMeaningfulSectionContent(draft.sections)) {
+          const proceed = confirm("Import erstatter eksisterende seksjoner, tekst og akkordplasseringer i denne sangen. Fortsette?");
+          if (!proceed) return;
+        }
+
+        draft.sections = imported;
+        selectedChordId = null;
+        renderSections();
+        dialog.close();
+        setMessage(message, `${imported.length} ${imported.length === 1 ? "seksjon" : "seksjoner"} importert. Husk å lagre sangen.`);
+      } catch (error) {
+        setMessage(importMessage, error.message, true);
+      }
+    });
+
+    form.append(title, help, textarea, importMessage, actions);
+    dialog.append(form);
+    document.body.append(dialog);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    dialog.showModal();
+    textarea.focus();
+  }
 
   function renderPalette() {
     palette.replaceChildren();
@@ -448,6 +521,66 @@ export function renderSongEditor(container, draft, { onSave, onCancel }) {
   renderPalette();
   renderSections();
   container.append(editor);
+}
+
+export function parseSongText(value) {
+  const lines = String(value ?? "").replace(/\r\n?/g, "\n").split("\n");
+  const sections = [];
+  let current = null;
+
+  const startSection = label => {
+    const section = createSection();
+    section.type = sectionTypeFromLabel(label);
+    section.label = label;
+    section.transpose = 0;
+    section.lines = [];
+    sections.push(section);
+    current = section;
+  };
+
+  for (const text of lines) {
+    const marker = text.match(/^\s*\[([^\]]+)\]\s*$/);
+    if (marker) {
+      const label = marker[1].trim();
+      if (!label) continue;
+      startSection(label);
+      continue;
+    }
+
+    if (!current) startSection("Vers 1");
+    const line = createLine();
+    line.vocal = text;
+    current.lines.push(line);
+  }
+
+  for (const section of sections) {
+    if (!section.lines.length) section.lines.push(createLine());
+  }
+
+  return sections;
+}
+
+function sectionTypeFromLabel(label) {
+  const value = label.trim().toLocaleLowerCase("nb");
+  if (/^(intro|innledning)\b/.test(value)) return "intro";
+  if (/^(chorus|refreng)\b/.test(value)) return "chorus";
+  if (/^(bridge|bro)\b/.test(value)) return "bridge";
+  if (/^(interlude|mellomspill)\b/.test(value)) return "interlude";
+  if (/^(vers|verse)\b/.test(value)) return "verse";
+  return "verse";
+}
+
+function hasMeaningfulSectionContent(sections) {
+  if (!Array.isArray(sections) || !sections.length) return false;
+  return sections.some(section =>
+    (section.label && section.label !== "Vers 1") ||
+    section.transpose !== 0 ||
+    section.lines?.some(line =>
+      Boolean(line.vocal?.trim()) ||
+      Boolean(line.harmony?.trim()) ||
+      Boolean(line.chords?.length)
+    )
+  );
 }
 
 function lineColumns(line) {

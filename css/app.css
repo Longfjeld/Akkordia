@@ -866,3 +866,45 @@ body.is-playing .play-view { display: block !important; }
   .player-controls button { padding-inline: 0.4rem; font-size: 0.9rem; }
   .setlist-header-actions { flex-wrap: wrap; justify-content: flex-end; }
 }
+
+
+/* Milestone 6.1: text import */
+.editor-import-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.editor-import-row .muted {
+  flex: 1 1 20rem;
+}
+.text-import-dialog {
+  width: min(46rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 1px solid #b7bec6;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px rgb(31 35 40 / 22%);
+}
+.text-import-dialog::backdrop {
+  background: rgb(31 35 40 / 40%);
+}
+.text-import-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.text-import-form h2,
+.text-import-form p {
+  margin: 0;
+}
+.text-import-area {
+  width: 100%;
+  min-height: 20rem;
+  resize: vertical;
+  padding: 0.75rem;
+  border: 1px solid #b7bec6;
+  border-radius: 0.5rem;
+  font: 0.95rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
