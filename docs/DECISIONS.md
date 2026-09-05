@@ -628,3 +628,80 @@ Paletten har ikke egen lagringsmodell.
 ### Begrunnelse
 
 `chordSet` er allerede autoritativt sangdata. En separat palettmodell ville introdusert unødvendig kode og risiko for inkonsistens.
+
+# DECISIONS – tillegg Milestone 5
+
+## ADR-0037 – Setlist schema v1 beholdes uendret
+
+Status: Accepted
+
+### Beslutning
+
+Set-lister lagres fortsatt som:
+
+```text
+schemaVersion
+id
+name
+songs[]
+```
+
+Milestone 5 legger ikke til entry-ID-er, dato, type eller annen metadata.
+
+---
+
+## ADR-0038 – Midlertidige entry-nøkler brukes bare i editoren
+
+Status: Accepted
+
+### Beslutning
+
+Editoren kan opprette en midlertidig lokal nøkkel for hver rad mens set-listen redigeres.
+
+Disse nøklene brukes bare for UI, spesielt når samme sang forekommer flere ganger.
+
+Ved lagring serialiseres kun sang-ID-ene tilbake til `songs[]`.
+
+### Begrunnelse
+
+Dette gir enkel dra-/flyttelogikk uten å komplisere det permanente dataformatet.
+
+---
+
+## ADR-0039 – Manglende sangreferanser bevares
+
+Status: Accepted
+
+### Beslutning
+
+Hvis en set-list refererer til en sang-ID som ikke finnes i det lastede sangbiblioteket, markeres referansen som manglende i UI.
+
+Akkordia skal ikke automatisk fjerne referansen.
+
+### Begrunnelse
+
+En manglende eller midlertidig utilgjengelig sangfil skal ikke føre til stille endring eller datatap i set-listen.
+
+---
+
+## ADR-0040 – Set-lister bruker samme optimistic concurrency-modell som sanger
+
+Status: Accepted
+
+### Beslutning
+
+Eksisterende set-listfiler lagres med OneDrive `eTag` og `If-Match`.
+
+HTTP 412 behandles som redigeringskonflikt og skal ikke overskrives automatisk.
+
+---
+
+## ADR-0041 – Sist valgte set-liste er lokal preferanse
+
+Status: Accepted
+
+### Beslutning
+
+Sist valgte set-list lagres lokalt per `workspaceId`.
+
+Dette feltet lagres ikke i `akkordia.json` eller set-listfilen.

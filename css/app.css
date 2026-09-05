@@ -494,3 +494,165 @@ button:disabled { cursor: default; opacity: 0.55; }
     margin-inline: -0.15rem;
   }
 }
+
+/* Milestone 5: set-list workflow */
+.setlists-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.setlist-library,
+.setlist-detail {
+  background: #fff;
+  border: 1px solid #d8dee4;
+  border-radius: 0.75rem;
+}
+
+.setlist-library {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+}
+
+.setlist-refresh { margin-top: 0.75rem; }
+.setlist-library .message { margin: 0.75rem; }
+.setlist-list { border-top: 1px solid #eef0f2; }
+.setlist-row {
+  display: block;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-bottom: 1px solid #eef0f2;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+}
+.setlist-row:hover { background: #f6f7f8; }
+.setlist-row.is-selected { background: #eef1f4; font-weight: 650; }
+
+.setlist-detail {
+  min-height: 28rem;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+.setlist-header { padding-bottom: 1rem; border-bottom: 1px solid #d8dee4; }
+.setlist-header h1 { margin: 0; }
+.setlist-read-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0;
+  padding-left: 2.4rem;
+}
+.setlist-read-list li { padding-left: 0.25rem; }
+.setlist-song-link {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #e1e5e9;
+  border-radius: 0.5rem;
+  background: #fff;
+  text-align: left;
+}
+.setlist-song-link:hover { background: #f6f7f8; }
+.setlist-missing-song { color: #a40e26; }
+
+.setlist-editor { display: grid; gap: 1rem; }
+.setlist-editor-toolbar,
+.setlist-sequence-heading,
+.setlist-available-row,
+.setlist-entry,
+.setlist-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.setlist-editor-toolbar,
+.setlist-sequence-heading,
+.setlist-available-row { justify-content: space-between; }
+.setlist-editor-toolbar h1,
+.setlist-song-picker h2,
+.setlist-sequence-card h2 { margin: 0; }
+.setlist-name-field { max-width: 34rem; }
+.setlist-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(18rem, 1.3fr);
+  gap: 1rem;
+  align-items: start;
+}
+.setlist-filter {
+  width: 100%;
+  margin: 0.8rem 0;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.45rem;
+  font: inherit;
+}
+.setlist-available-list {
+  display: grid;
+  max-height: 30rem;
+  overflow: auto;
+  border-top: 1px solid #eef0f2;
+}
+.setlist-available-row {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #eef0f2;
+}
+.setlist-sequence { display: grid; gap: 0.45rem; margin-top: 0.8rem; }
+.setlist-empty { margin-bottom: 0; }
+.setlist-entry {
+  display: grid;
+  grid-template-columns: auto 2rem minmax(0, 1fr) auto;
+  padding: 0.55rem;
+  border: 1px solid #e1e5e9;
+  border-radius: 0.5rem;
+  background: #fff;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.setlist-entry.is-drop-target {
+  border-color: #1f6feb;
+  background: #f3f8ff;
+}
+.setlist-entry.is-missing {
+  border-color: #efb6b2;
+  background: #fff8f7;
+}
+.setlist-entry-number {
+  color: #59636e;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.setlist-entry-label { display: grid; min-width: 0; }
+.setlist-entry-label strong,
+.setlist-entry-label small {
+  overflow-wrap: anywhere;
+}
+.setlist-entry-actions { justify-content: flex-end; }
+.setlist-drag-handle {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid #d0d7de;
+  border-radius: 0.45rem;
+  background: #fff;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.setlist-drag-handle:active { cursor: grabbing; }
+
+@media (max-width: 760px) {
+  .setlists-layout,
+  .setlist-editor-layout { grid-template-columns: 1fr; }
+  .setlist-library { position: static; max-height: none; }
+  .setlist-list { max-height: 14rem; overflow: auto; }
+  .setlist-detail { min-height: 20rem; }
+  .setlist-entry {
+    grid-template-columns: auto 2rem minmax(0, 1fr);
+  }
+  .setlist-entry-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}

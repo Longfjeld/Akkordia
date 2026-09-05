@@ -3,6 +3,8 @@ import { getRootFolder, listFolders, validateWorkspace } from "./onedrive.js";
 import { getActiveWorkspace, saveWorkspace, setActiveWorkspaceId } from "./workspaces.js";
 import { createSong, getLyricsView, loadSongs, saveSong, setLyricsView } from "./songs.js";
 import { cloneSong, renderSongEditor } from "./editor.js";
+import { createSetlist, getActiveSetlistId, loadSetlists, saveSetlist, setActiveSetlistId } from "./setlists.js";
+import { renderSetlistEditor } from "./setlist-editor.js";
 
 const ui = {
   accountButton: document.querySelector("#accountButton"),
@@ -16,6 +18,12 @@ const ui = {
   songDetail: document.querySelector("#songDetail"),
   lyricsView: document.querySelector("#lyricsView"),
   newSongButton: document.querySelector("#newSongButton"),
+  setlistsView: document.querySelector("#setlistsView"),
+  setlistList: document.querySelector("#setlistList"),
+  setlistListMessage: document.querySelector("#setlistListMessage"),
+  setlistDetail: document.querySelector("#setlistDetail"),
+  newSetlistButton: document.querySelector("#newSetlistButton"),
+  refreshSetlistsButton: document.querySelector("#refreshSetlistsButton"),
   folderDialog: document.querySelector("#folderDialog"),
   folderPath: document.querySelector("#folderPath"),
   folderList: document.querySelector("#folderList"),
@@ -28,6 +36,9 @@ let folderStack = [];
 let songs = [];
 let selectedSongId = null;
 let editingSong = null;
+let setlists = [];
+let selectedSetlistId = null;
+let editingSetlist = null;
 let activeView = "songs";
 
 async function start() {
@@ -55,13 +66,14 @@ function renderView() {
   const workspace = getActiveWorkspace();
   ui.welcome.classList.toggle("hidden", Boolean(workspace));
   ui.songsView.classList.toggle("hidden", !workspace || activeView !== "songs");
+  ui.setlistsView.classList.toggle("hidden", !workspace || activeView !== "setlists");
 
   document.querySelectorAll("[data-view]").forEach(button => {
     button.classList.toggle("is-active", button.dataset.view === activeView);
   });
 
-  if (workspace && activeView !== "songs") {
-    showStatus(`${viewName(activeView)} kommer i en senere milepæl.`, false);
+  if (workspace && activeView === "play") {
+    showStatus("Spill kommer i neste milepæl.", false);
   } else if (workspace) {
     showStatus(`Aktivt band: ${workspace.name}`, false);
   }
@@ -251,13 +263,180 @@ async function saveDraft(draft, existingSong) {
   showStatus(`Sangen «${draft.title}» er lagret.`, false);
 }
 
+async function refreshSetlists() {
+  const workspace = getActiveWorkspace();
+  if (!workspace || !getAccount()) return;
+
+  editingSetlist = null;
+  setSetlistListMessage("Laster set-lister …");
+  ui.setlistList.replaceChildren();
+  ui.setlistDetail.replaceChildren();
+
+  try {
+    const result = await loadSetlists(workspace);
+    setlists = result.setlists;
+    const preferred = selectedSetlistId ?? getActiveSetlistId(workspace.workspaceId);
+    selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
+    renderSetlistList();
+
+    if (!setlists.length) setSetlistListMessage("Ingen set-lister er opprettet ennå.");
+    else if (result.errors.length) {
+      setSetlistListMessage(`${setlists.length} set-lister lastet. ${result.errors.length} fil(er) kunne ikke leses.`, true);
+      console.warn("Set-listfiler som ikke kunne leses:", result.errors);
+    } else {
+      setSetlistListMessage(`${setlists.length} set-lister lastet.`);
+    }
+
+    if (selectedSetlistId) renderSetlist(setlists.find(item => item.id === selectedSetlistId));
+    else renderSetlistPlaceholder();
+  } catch (error) {
+    setSetlistListMessage(error.message, true);
+    renderSetlistPlaceholder();
+  }
+}
+
+function renderSetlistList() {
+  ui.setlistList.replaceChildren();
+  for (const setlist of setlists) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "setlist-row";
+    button.textContent = setlist.name;
+    button.classList.toggle("is-selected", setlist.id === selectedSetlistId);
+    button.addEventListener("click", () => {
+      if (editingSetlist && !confirm("Avslutte redigering uten å lagre?")) return;
+      editingSetlist = null;
+      selectedSetlistId = setlist.id;
+      const workspace = getActiveWorkspace();
+      if (workspace) setActiveSetlistId(workspace.workspaceId, setlist.id);
+      renderSetlistList();
+      renderSetlist(setlist);
+    });
+    ui.setlistList.append(button);
+  }
+}
+
+function renderSetlist(setlist) {
+  editingSetlist = null;
+  ui.setlistDetail.replaceChildren();
+  const songById = new Map(songs.map(song => [song.id, song]));
+
+  const header = document.createElement("header");
+  header.className = "setlist-header";
+  const headingRow = document.createElement("div");
+  headingRow.className = "song-heading-row";
+  const title = document.createElement("h1");
+  title.textContent = setlist.name;
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "secondary";
+  edit.textContent = "Rediger";
+  edit.addEventListener("click", () => beginEditSetlist(setlist));
+  headingRow.append(title, edit);
+  header.append(headingRow);
+
+  const meta = document.createElement("p");
+  meta.className = "muted song-meta";
+  meta.textContent = `${setlist.songs.length} ${setlist.songs.length === 1 ? "sang" : "sanger"}`;
+  header.append(meta);
+  ui.setlistDetail.append(header);
+
+  if (!setlist.songs.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Set-listen er tom. Velg Rediger for å legge til sanger.";
+    ui.setlistDetail.append(empty);
+    return;
+  }
+
+  const list = document.createElement("ol");
+  list.className = "setlist-read-list";
+  setlist.songs.forEach(songId => {
+    const song = songById.get(songId);
+    const item = document.createElement("li");
+    if (song) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "setlist-song-link";
+      button.textContent = song.title;
+      button.addEventListener("click", () => {
+        activeView = "songs";
+        selectedSongId = song.id;
+        renderView();
+        renderSongList();
+        renderSong(song);
+      });
+      item.append(button);
+    } else {
+      item.className = "setlist-missing-song";
+      item.textContent = `Mangler sang: ${songId}`;
+    }
+    list.append(item);
+  });
+  ui.setlistDetail.append(list);
+}
+
+function beginEditSetlist(setlist) {
+  editingSetlist = setlist;
+  const draft = structuredClone(setlist);
+  renderSetlistEditor(ui.setlistDetail, draft, songs, {
+    onCancel: () => {
+      editingSetlist = null;
+      renderSetlist(setlist);
+    },
+    onSave: async value => saveSetlistDraft(value, setlist)
+  });
+}
+
+function beginNewSetlist() {
+  if (editingSetlist && !confirm("Avslutte redigering uten å lagre?")) return;
+  const draft = createSetlist();
+  editingSetlist = draft;
+  selectedSetlistId = null;
+  renderSetlistList();
+  renderSetlistEditor(ui.setlistDetail, structuredClone(draft), songs, {
+    onCancel: () => {
+      editingSetlist = null;
+      renderSetlistPlaceholder();
+    },
+    onSave: async value => saveSetlistDraft(value, null)
+  });
+}
+
+async function saveSetlistDraft(draft, existingSetlist) {
+  const workspace = getActiveWorkspace();
+  if (!workspace) throw new Error("Ingen workspace er valgt.");
+
+  await saveSetlist(workspace, draft, existingSetlist);
+
+  if (existingSetlist) {
+    const index = setlists.indexOf(existingSetlist);
+    if (index >= 0) setlists[index] = draft;
+  } else {
+    setlists.push(draft);
+  }
+
+  setlists.sort((a, b) => a.name.localeCompare(b.name, "nb", { sensitivity: "base" }));
+  selectedSetlistId = draft.id;
+  setActiveSetlistId(workspace.workspaceId, draft.id);
+  editingSetlist = null;
+  renderSetlistList();
+  renderSetlist(draft);
+  setSetlistListMessage(`${setlists.length} set-lister lastet.`);
+  showStatus(`Set-listen «${draft.name}» er lagret.`, false);
+}
+
+function renderSetlistPlaceholder() {
+  ui.setlistDetail.innerHTML = '<div class="song-placeholder"><p>Velg en set-liste eller opprett en ny.</p></div>';
+}
+
 function renderSongPlaceholder() {
   ui.songDetail.innerHTML = '<div class="song-placeholder"><p>Velg en sang fra biblioteket eller opprett en ny.</p></div>';
 }
 
 ui.accountButton.addEventListener("click", async () => {
   try {
-    if (getAccount() && editingSong && !confirm("Avslutte redigering uten å lagre?")) return;
+    if (getAccount() && (editingSong || editingSetlist) && !confirm("Avslutte redigering uten å lagre?")) return;
     if (getAccount()) await signOut();
     else await signIn();
   } catch (error) {
@@ -278,6 +457,12 @@ ui.connectWorkspace.addEventListener("click", async () => {
 });
 
 ui.newSongButton.addEventListener("click", beginNewSong);
+ui.newSetlistButton.addEventListener("click", beginNewSetlist);
+ui.refreshSetlistsButton.addEventListener("click", async () => {
+  if (editingSetlist && !confirm("Avslutte redigering uten å lagre?")) return;
+  editingSetlist = null;
+  await refreshSetlists();
+});
 
 ui.folderUp.addEventListener("click", async () => {
   if (folderStack.length <= 1) return;
@@ -299,6 +484,9 @@ ui.selectFolder.addEventListener("click", async () => {
     ui.folderDialog.close();
     selectedSongId = null;
     editingSong = null;
+    selectedSetlistId = null;
+    editingSetlist = null;
+    setlists = [];
     renderHeader();
     renderView();
     await refreshSongs();
@@ -367,6 +555,12 @@ function setSongListMessage(message, isError = false) {
   ui.songListMessage.classList.toggle("error", isError);
 }
 
+function setSetlistListMessage(message, isError = false) {
+  ui.setlistListMessage.textContent = message;
+  ui.setlistListMessage.classList.toggle("hidden", !message);
+  ui.setlistListMessage.classList.toggle("error", isError);
+}
+
 function showStatus(message, isError) {
   ui.workspaceStatus.textContent = message;
   ui.workspaceStatus.classList.remove("hidden");
@@ -384,16 +578,21 @@ function signed(value) {
 }
 
 document.querySelectorAll("[data-view]").forEach(button => {
-  button.addEventListener("click", () => {
-    if (editingSong && button.dataset.view !== "songs" && !confirm("Avslutte redigering uten å lagre?")) return;
-    if (button.dataset.view !== "songs") editingSong = null;
-    activeView = button.dataset.view;
+  button.addEventListener("click", async () => {
+    const nextView = button.dataset.view;
+    if (nextView === activeView) return;
+    if (editingSong && nextView !== "songs" && !confirm("Avslutte redigering uten å lagre?")) return;
+    if (editingSetlist && nextView !== "setlists" && !confirm("Avslutte redigering uten å lagre?")) return;
+    if (nextView !== "songs") editingSong = null;
+    if (nextView !== "setlists") editingSetlist = null;
+    activeView = nextView;
     renderView();
+    if (activeView === "setlists" && getActiveWorkspace() && getAccount()) await refreshSetlists();
   });
 });
 
 window.addEventListener("beforeunload", event => {
-  if (!editingSong) return;
+  if (!editingSong && !editingSetlist) return;
   event.preventDefault();
   event.returnValue = "";
 });

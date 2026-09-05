@@ -62,6 +62,26 @@
         </div>
       </article>
     </section>
+
+    <section id="setlistsView" class="setlists-layout hidden">
+      <aside class="setlist-library" aria-label="Set-lister">
+        <div class="library-header">
+          <div class="library-title-row">
+            <h1>Set-lister</h1>
+            <button id="newSetlistButton" type="button" class="secondary small">+ Ny set-liste</button>
+          </div>
+          <button id="refreshSetlistsButton" type="button" class="secondary small setlist-refresh">Oppdater</button>
+        </div>
+        <div id="setlistListMessage" class="message hidden" aria-live="polite"></div>
+        <div id="setlistList" class="setlist-list"></div>
+      </aside>
+
+      <article id="setlistDetail" class="setlist-detail">
+        <div class="song-placeholder">
+          <p>Velg en set-liste eller opprett en ny.</p>
+        </div>
+      </article>
+    </section>
   </main>
 
   <dialog id="folderDialog" class="folder-dialog">
