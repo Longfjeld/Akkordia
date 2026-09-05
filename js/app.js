@@ -5,6 +5,7 @@ import { createSong, getLyricsView, loadSongs, saveSong, setLyricsView } from ".
 import { cloneSong, renderSongEditor } from "./editor.js";
 import { createSetlist, getActiveSetlistId, loadSetlists, saveSetlist, setActiveSetlistId } from "./setlists.js";
 import { renderSetlistEditor } from "./setlist-editor.js";
+import { createPlayer } from "./player.js";
 
 const ui = {
   accountButton: document.querySelector("#accountButton"),
@@ -24,6 +25,8 @@ const ui = {
   setlistDetail: document.querySelector("#setlistDetail"),
   newSetlistButton: document.querySelector("#newSetlistButton"),
   refreshSetlistsButton: document.querySelector("#refreshSetlistsButton"),
+  playView: document.querySelector("#playView"),
+  playContent: document.querySelector("#playContent"),
   folderDialog: document.querySelector("#folderDialog"),
   folderPath: document.querySelector("#folderPath"),
   folderList: document.querySelector("#folderList"),
@@ -40,6 +43,7 @@ let setlists = [];
 let selectedSetlistId = null;
 let editingSetlist = null;
 let activeView = "songs";
+let currentPlayer = null;
 
 async function start() {
   try {
@@ -67,13 +71,14 @@ function renderView() {
   ui.welcome.classList.toggle("hidden", Boolean(workspace));
   ui.songsView.classList.toggle("hidden", !workspace || activeView !== "songs");
   ui.setlistsView.classList.toggle("hidden", !workspace || activeView !== "setlists");
+  ui.playView.classList.toggle("hidden", !workspace || activeView !== "play");
 
   document.querySelectorAll("[data-view]").forEach(button => {
     button.classList.toggle("is-active", button.dataset.view === activeView);
   });
 
   if (workspace && activeView === "play") {
-    showStatus("Spill kommer i neste milepæl.", false);
+    showStatus(`Spill · ${workspace.name}`, false);
   } else if (workspace) {
     showStatus(`Aktivt band: ${workspace.name}`, false);
   }
@@ -328,12 +333,21 @@ function renderSetlist(setlist) {
   headingRow.className = "song-heading-row";
   const title = document.createElement("h1");
   title.textContent = setlist.name;
+  const actions = document.createElement("div");
+  actions.className = "setlist-header-actions";
+  const play = document.createElement("button");
+  play.type = "button";
+  play.className = "primary";
+  play.textContent = "Spill";
+  play.disabled = !songItems.some(item => songById.has(item.songId));
+  play.addEventListener("click", () => startSetlistPlayer(setlist));
   const edit = document.createElement("button");
   edit.type = "button";
   edit.className = "secondary";
   edit.textContent = "Rediger";
   edit.addEventListener("click", () => beginEditSetlist(setlist));
-  headingRow.append(title, edit);
+  actions.append(play, edit);
+  headingRow.append(title, actions);
   header.append(headingRow);
 
   const meta = document.createElement("p");
@@ -450,6 +464,111 @@ async function saveSetlistDraft(draft, existingSetlist) {
   showStatus(`Set-listen «${draft.name}» er lagret.`, false);
 }
 
+async function preparePlayView() {
+  if (!getActiveWorkspace() || !getAccount() || currentPlayer) return;
+
+  ui.playContent.innerHTML = '<div class="player-empty"><p>Laster set-lister …</p></div>';
+  try {
+    if (!setlists.length) {
+      const result = await loadSetlists(getActiveWorkspace());
+      setlists = result.setlists;
+      const preferred = selectedSetlistId ?? getActiveSetlistId(getActiveWorkspace().workspaceId);
+      selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
+    }
+    renderPlayChooser();
+  } catch (error) {
+    ui.playContent.innerHTML = `<div class="player-empty"><h1>Spill</h1><p class="error">${escapeHtml(error.message)}</p></div>`;
+  }
+}
+
+function renderPlayChooser() {
+  currentPlayer?.destroy();
+  currentPlayer = null;
+  ui.playContent.replaceChildren();
+
+  const chooser = document.createElement("section");
+  chooser.className = "player-chooser";
+  const title = document.createElement("h1");
+  title.textContent = "Spill";
+  const intro = document.createElement("p");
+  intro.className = "muted";
+  intro.textContent = "Velg set-list. Spill-modus holder skjermen aktiv der nettleseren tillater det.";
+  chooser.append(title, intro);
+
+  if (!setlists.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Ingen set-lister er tilgjengelige.";
+    chooser.append(empty);
+    ui.playContent.append(chooser);
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "player-setlist-list";
+  for (const setlist of setlists) {
+    const songCount = setlist.items.filter(item => item.type === "song" && songs.some(song => song.id === item.songId)).length;
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "player-setlist-row";
+    row.disabled = songCount === 0;
+    const name = document.createElement("strong");
+    name.textContent = setlist.name;
+    const meta = document.createElement("span");
+    meta.className = "muted";
+    meta.textContent = `${songCount} ${songCount === 1 ? "sang" : "sanger"}`;
+    row.append(name, meta);
+    row.addEventListener("click", () => startSetlistPlayer(setlist));
+    list.append(row);
+  }
+  chooser.append(list);
+  ui.playContent.append(chooser);
+}
+
+function startSetlistPlayer(setlist) {
+  const playable = setlist.items.some(item => item.type === "song" && songs.some(song => song.id === item.songId));
+  if (!playable) {
+    showStatus("Set-listen inneholder ingen tilgjengelige sanger.", true);
+    return;
+  }
+
+  currentPlayer?.destroy();
+  selectedSetlistId = setlist.id;
+  const workspace = getActiveWorkspace();
+  if (workspace) setActiveSetlistId(workspace.workspaceId, setlist.id);
+  activeView = "play";
+  renderView();
+  currentPlayer = createPlayer(ui.playContent, {
+    setlist,
+    songs,
+    lyricsView: getLyricsView(),
+    onExit: () => exitPlayer(setlist)
+  });
+}
+
+function exitPlayer(setlist) {
+  currentPlayer?.destroy();
+  currentPlayer = null;
+  activeView = "setlists";
+  renderView();
+  selectedSetlistId = setlist.id;
+  renderSetlistList();
+  renderSetlist(setlist);
+}
+
+function stopPlayer() {
+  currentPlayer?.destroy();
+  currentPlayer = null;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function renderSetlistPlaceholder() {
   ui.setlistDetail.innerHTML = '<div class="song-placeholder"><p>Velg en set-liste eller opprett en ny.</p></div>';
 }
@@ -506,6 +625,7 @@ ui.selectFolder.addEventListener("click", async () => {
     saveWorkspace(workspace);
     setActiveWorkspaceId(workspace.workspaceId);
     ui.folderDialog.close();
+    stopPlayer();
     selectedSongId = null;
     editingSong = null;
     selectedSetlistId = null;
@@ -609,9 +729,11 @@ document.querySelectorAll("[data-view]").forEach(button => {
     if (editingSetlist && nextView !== "setlists" && !confirm("Avslutte redigering uten å lagre?")) return;
     if (nextView !== "songs") editingSong = null;
     if (nextView !== "setlists") editingSetlist = null;
+    if (activeView === "play" && nextView !== "play") stopPlayer();
     activeView = nextView;
     renderView();
     if (activeView === "setlists" && getActiveWorkspace() && getAccount()) await refreshSetlists();
+    if (activeView === "play" && getActiveWorkspace() && getAccount()) await preparePlayView();
   });
 });
 
