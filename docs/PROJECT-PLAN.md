@@ -515,6 +515,8 @@ Ved oppstart bør appen kunne:
 4. oppdatere IndexedDB
 5. oppdatere visningen uten å gjøre appen utilgjengelig mens synkronisering pågår
 
+For set-lister er dette konkret implementert som cache-first med bakgrunnsrevalidering. RAM brukes først når tilgjengelig, ellers IndexedDB. OneDrive-revalidering skal ikke gjentas ved vanlig visningsbytte når datasettet allerede er kontrollert i samme app-økt. Eksplisitt Oppdater skal fortsatt fremtvinge ny lesing.
+
 Appen skal alltid vise tydelig om data er:
 
 - oppdatert
@@ -973,16 +975,17 @@ Følgende registreres som første beslutninger i `DECISIONS.md` når prosjektet 
 18. Spill-modus holdes fri for direkte redigering.
 19. Screen Wake Lock brukes under Spill-modus der dette støttes.
 20. IndexedDB brukes for offline-lesing/cache.
-21. Offline-skriving utsettes til et dokumentert behov foreligger.
-22. Optimistic concurrency / ekstern versjonskontroll brukes ved skriving.
-23. Automatisk merge av konflikter er ikke krav i første versjon.
-24. Fontstørrelse kan være lokal innstilling dersom dette kan gjøres med svært liten kompleksitet.
-25. Autoscroll styres av felles sangdata/BPM og skal indikere aktuell posisjon.
-26. Private notater bruker privat OneDrive-lagring med konto-/workspace-isolert IndexedDB-cache.
-27. Norsk er første UI-språk, men tekstressurser struktureres for enkel senere oversettelse.
-28. Vanilla HTML/CSS/JavaScript og native ES modules foretrekkes.
-29. Framework/build-system innføres bare ved dokumentert behov.
-30. Migrering fra gammelt format skal være et separat, repeterbart verktøy.
+21. Set-lister bruker cache-first visning med OneDrive-revalidering i bakgrunnen og sesjonsferskhet for å unngå unødvendig dobbel Graph-lasting.
+22. Offline-skriving utsettes til et dokumentert behov foreligger.
+23. Optimistic concurrency / ekstern versjonskontroll brukes ved skriving.
+24. Automatisk merge av konflikter er ikke krav i første versjon.
+25. Fontstørrelse kan være lokal innstilling dersom dette kan gjøres med svært liten kompleksitet.
+26. Autoscroll styres av felles sangdata/BPM og skal indikere aktuell posisjon.
+27. Private notater bruker privat OneDrive-lagring med konto-/workspace-isolert IndexedDB-cache.
+28. Norsk er første UI-språk, men tekstressurser struktureres for enkel senere oversettelse.
+29. Vanilla HTML/CSS/JavaScript og native ES modules foretrekkes.
+30. Framework/build-system innføres bare ved dokumentert behov.
+31. Migrering fra gammelt format skal være et separat, repeterbart verktøy.
 
 ---
 

@@ -49,6 +49,11 @@ let activeView = "songs";
 let currentPlayer = null;
 let songsReadOnly = true;
 let setlistsReadOnly = true;
+let setlistsWorkspaceId = null;
+let setlistsSyncedWorkspaceId = null;
+let setlistsRefreshPromise = null;
+let setlistsRefreshWorkspaceId = null;
+let setlistsLastErrors = [];
 let privateNotesState = null;
 let privateNotesSyncTimer = null;
 
@@ -74,7 +79,7 @@ async function start() {
   if (workspace) {
     await refreshSongs();
     await initializePrivateNotes(workspace);
-    if (navigator.onLine && getAccount()) await primeSetlistsForOffline();
+    await primeSetlistsForOffline();
   }
 
   if (authError) {
@@ -140,16 +145,68 @@ function renderConnectivity() {
 
 async function primeSetlistsForOffline() {
   const workspace = getActiveWorkspace();
-  if (!workspace || !navigator.onLine || !getAccount()) return;
+  if (!workspace) return;
 
-  try {
+  await loadSetlistsFromCache(workspace);
+
+  if (navigator.onLine && getAccount()) {
+    void refreshSetlistsFromOneDrive(workspace).catch(error => {
+      console.info("Kunne ikke forhåndslaste set-lister fra OneDrive:", error);
+    });
+  }
+}
+
+async function loadSetlistsFromCache(workspace) {
+  const cached = await getWorkspaceSnapshot(workspace.workspaceId);
+  if (!cached?.hasSetlists) return false;
+
+  setlists = cached.setlists;
+  setlistsWorkspaceId = workspace.workspaceId;
+  setlistsReadOnly = setlistsSyncedWorkspaceId !== workspace.workspaceId;
+  renderConnectivity();
+  return true;
+}
+
+async function refreshSetlistsFromOneDrive(workspace, { force = false } = {}) {
+  if (!workspace || !navigator.onLine || !getAccount()) return null;
+
+  if (!force && setlistsSyncedWorkspaceId === workspace.workspaceId) {
+    return { setlists, errors: setlistsLastErrors, changed: false, fromMemory: true };
+  }
+
+  if (!force && setlistsRefreshPromise && setlistsRefreshWorkspaceId === workspace.workspaceId) {
+    return setlistsRefreshPromise;
+  }
+
+  const workspaceId = workspace.workspaceId;
+  const request = (async () => {
     const result = await loadSetlists(workspace);
+    const changed = setlistsWorkspaceId !== workspaceId || !sameSetlists(setlists, result.setlists);
+
+    if (getActiveWorkspace()?.workspaceId !== workspaceId) {
+      return { ...result, changed, fromMemory: false, ignored: true };
+    }
+
     setlists = result.setlists;
+    setlistsWorkspaceId = workspaceId;
+    setlistsSyncedWorkspaceId = workspaceId;
+    setlistsLastErrors = result.errors;
     setlistsReadOnly = false;
-    await updateWorkspaceSnapshot(workspace.workspaceId, { setlists: result.setlists });
+    await updateWorkspaceSnapshot(workspaceId, { setlists: result.setlists });
     renderConnectivity();
-  } catch (error) {
-    console.info("Kunne ikke forhåndslagre set-lister for offline-bruk:", error);
+
+    return { ...result, changed, fromMemory: false };
+  })();
+
+  setlistsRefreshPromise = request;
+  setlistsRefreshWorkspaceId = workspaceId;
+  try {
+    return await request;
+  } finally {
+    if (setlistsRefreshPromise === request) {
+      setlistsRefreshPromise = null;
+      setlistsRefreshWorkspaceId = null;
+    }
   }
 }
 
@@ -157,26 +214,28 @@ async function loadSetlistsForCurrentMode() {
   const workspace = getActiveWorkspace();
   if (!workspace) return;
 
-  if (navigator.onLine && getAccount()) {
-    try {
-      const result = await loadSetlists(workspace);
-      setlists = result.setlists;
-      setlistsReadOnly = false;
-      await updateWorkspaceSnapshot(workspace.workspaceId, { setlists });
-      renderConnectivity();
-      return;
-    } catch (error) {
-      console.warn("Online lasting av set-lister feilet. Prøver offline-cache:", error);
+  if (setlistsWorkspaceId === workspace.workspaceId && setlists.length) return;
+
+  const hasCache = await loadSetlistsFromCache(workspace);
+  if (hasCache) {
+    if (navigator.onLine && getAccount()) {
+      void refreshSetlistsFromOneDrive(workspace).catch(error => {
+        console.warn("Bakgrunnsoppdatering av set-lister feilet:", error);
+      });
     }
+    return;
   }
 
-  const cached = await getWorkspaceSnapshot(workspace.workspaceId);
-  if (!cached?.hasSetlists) {
-    throw new Error("Ingen offline-cache for set-lister er tilgjengelig.");
+  if (navigator.onLine && getAccount()) {
+    await refreshSetlistsFromOneDrive(workspace);
+    return;
   }
-  setlists = cached.setlists;
-  setlistsReadOnly = true;
-  renderConnectivity();
+
+  throw new Error("Ingen offline-cache for set-lister er tilgjengelig.");
+}
+
+function sameSetlists(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 async function registerServiceWorker() {
@@ -605,64 +664,91 @@ function appendPrivateNotePanel(container, song) {
   updatePrivateNoteStatusIndicators();
 }
 
-async function refreshSetlists() {
+async function refreshSetlists({ force = false } = {}) {
   const workspace = getActiveWorkspace();
   if (!workspace) return;
 
   editingSetlist = null;
-  setSetlistListMessage(navigator.onLine ? "Laster set-lister …" : "Laster offline-data …");
-  ui.setlistList.replaceChildren();
-  ui.setlistDetail.replaceChildren();
 
   try {
-    let result;
-    let source = "online";
+    const sameWorkspaceInMemory = setlistsWorkspaceId === workspace.workspaceId;
+    let hasCachedData = sameWorkspaceInMemory && setlists.length > 0;
+
+    if (!hasCachedData) {
+      hasCachedData = await loadSetlistsFromCache(workspace);
+    }
+
+    if (hasCachedData) {
+      renderCurrentSetlists();
+      if (navigator.onLine && getAccount() && setlistsSyncedWorkspaceId !== workspace.workspaceId) {
+        setSetlistListMessage(`${setlists.length} set-lister fra lokal cache · oppdaterer fra OneDrive …`);
+      } else if (setlistsSyncedWorkspaceId === workspace.workspaceId) {
+        setSetlistListMessage(`${setlists.length} set-lister klare · synkronisert med OneDrive.`);
+      } else {
+        setSetlistListMessage(`${setlists.length} set-lister lastet fra offline-cache · kun lesing.`);
+      }
+    } else {
+      setSetlistListMessage(navigator.onLine ? "Laster set-lister fra OneDrive …" : "Laster offline-data …");
+      ui.setlistList.replaceChildren();
+      ui.setlistDetail.replaceChildren();
+    }
 
     if (navigator.onLine && getAccount()) {
-      try {
-        result = await loadSetlists(workspace);
-        await updateWorkspaceSnapshot(workspace.workspaceId, { setlists: result.setlists });
-      } catch (error) {
-        const cached = await getWorkspaceSnapshot(workspace.workspaceId);
-        if (!cached?.hasSetlists) throw error;
-        result = { setlists: cached.setlists, errors: [] };
-        source = "cache";
-        console.warn("Online lasting av set-lister feilet. Bruker offline-cache:", error);
+      const result = await refreshSetlistsFromOneDrive(workspace, { force });
+      if (!result) return;
+
+      if (result.ignored) return;
+      if (!result.fromMemory) renderCurrentSetlists();
+      else updateSelectedSetlistAfterRefresh();
+
+      if (!setlists.length) setSetlistListMessage("Ingen set-lister er opprettet ennå.");
+      else if (result.errors.length) {
+        setSetlistListMessage(`${setlists.length} set-lister lastet. ${result.errors.length} fil(er) kunne ikke leses.`, true);
+        console.warn("Set-listfiler som ikke kunne leses:", result.errors);
+      } else if (result.fromMemory && !force) {
+        setSetlistListMessage(`${setlists.length} set-lister klare · allerede synkronisert i denne økten.`);
+      } else {
+        setSetlistListMessage(`${setlists.length} set-lister oppdatert fra OneDrive.`);
       }
-    } else {
-      const cached = await getWorkspaceSnapshot(workspace.workspaceId);
-      if (!cached?.hasSetlists) {
-        throw new Error("Ingen offline-cache for set-lister er tilgjengelig. Koble til nett og åpne bandet minst én gang.");
-      }
-      result = { setlists: cached.setlists, errors: [] };
-      source = "cache";
+      return;
     }
 
-    setlists = result.setlists;
-    setlistsReadOnly = source === "cache";
-    renderConnectivity();
-    const preferred = selectedSetlistId ?? getActiveSetlistId(workspace.workspaceId);
-    selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
-    renderSetlistList();
-
-    if (!setlists.length) setSetlistListMessage("Ingen set-lister er opprettet ennå.");
-    else if (source === "cache") {
-      setSetlistListMessage(`${setlists.length} set-lister lastet fra offline-cache · kun lesing.`);
-    } else if (result.errors.length) {
-      setSetlistListMessage(`${setlists.length} set-lister lastet. ${result.errors.length} fil(er) kunne ikke leses.`, true);
-      console.warn("Set-listfiler som ikke kunne leses:", result.errors);
-    } else {
-      setSetlistListMessage(`${setlists.length} set-lister lastet fra OneDrive.`);
+    if (!hasCachedData) {
+      throw new Error("Ingen offline-cache for set-lister er tilgjengelig. Koble til nett og åpne bandet minst én gang.");
     }
-
-    if (selectedSetlistId) renderSetlist(setlists.find(item => item.id === selectedSetlistId));
-    else renderSetlistPlaceholder();
   } catch (error) {
+    if (setlistsWorkspaceId === workspace.workspaceId && setlists.length) {
+      setlistsReadOnly = true;
+      renderConnectivity();
+      renderCurrentSetlists();
+      setSetlistListMessage(`${setlists.length} set-lister fra lokal cache · OneDrive kunne ikke oppdateres.`, true);
+      console.warn("Online lasting av set-lister feilet. Beholder lokal cache:", error);
+      return;
+    }
+
     setlistsReadOnly = true;
     renderConnectivity();
     setSetlistListMessage(error.message, true);
     renderSetlistPlaceholder();
   }
+}
+
+function renderCurrentSetlists() {
+  const workspace = getActiveWorkspace();
+  if (!workspace) return;
+
+  updateSelectedSetlistAfterRefresh();
+  renderSetlistList();
+  if (selectedSetlistId) renderSetlist(setlists.find(item => item.id === selectedSetlistId));
+  else renderSetlistPlaceholder();
+}
+
+function updateSelectedSetlistAfterRefresh() {
+  const workspace = getActiveWorkspace();
+  if (!workspace) return;
+
+  const preferred = selectedSetlistId ?? getActiveSetlistId(workspace.workspaceId);
+  selectedSetlistId = setlists.some(item => item.id === preferred) ? preferred : null;
 }
 
 function renderSetlistList() {
@@ -992,7 +1078,7 @@ ui.newSetlistButton.addEventListener("click", beginNewSetlist);
 ui.refreshSetlistsButton.addEventListener("click", async () => {
   if (editingSetlist && !confirm("Avslutte redigering uten å lagre?")) return;
   editingSetlist = null;
-  await refreshSetlists();
+  await refreshSetlists({ force: true });
 });
 
 ui.folderUp.addEventListener("click", async () => {
@@ -1019,6 +1105,11 @@ ui.selectFolder.addEventListener("click", async () => {
     selectedSetlistId = null;
     editingSetlist = null;
     setlists = [];
+    setlistsWorkspaceId = null;
+    setlistsSyncedWorkspaceId = null;
+    setlistsRefreshPromise = null;
+    setlistsRefreshWorkspaceId = null;
+    setlistsLastErrors = [];
     renderHeader();
     renderView();
     await refreshSongs();
@@ -1148,6 +1239,7 @@ window.addEventListener("online", async () => {
 });
 
 window.addEventListener("offline", () => {
+  setlistsSyncedWorkspaceId = null;
   renderConnectivity();
   if (!editingSong && activeView === "songs" && selectedSongId) {
     const song = songs.find(item => item.id === selectedSongId);

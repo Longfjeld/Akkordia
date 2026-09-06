@@ -116,6 +116,8 @@ UI oppdateres
 
 Manglende nett skal ikke blokkere tidligere synkronisert innhold.
 
+For set-lister brukes cache-first i normal online-bruk: RAM/IndexedDB kan rendres før OneDrive-revalidering er ferdig. Cachet fellesdata behandles som midlertidig read-only inntil ferske OneDrive-objekter med item-referanse og `eTag` er lastet. En vellykket revalidering markeres som fersk for gjeldende app-økt, slik at vanlig navigasjon ikke starter en ny full Graph-lesing. Eksplisitt Oppdater fremtvinger fortsatt revalidering.
+
 ## 6. Dataflyt ved skriving
 
 ```text

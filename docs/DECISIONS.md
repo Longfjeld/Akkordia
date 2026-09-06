@@ -734,3 +734,19 @@ Schema v1 støttes ved lesing og normaliseres i minnet til v2. Migrering til v2 
 ## Identitet
 
 Det innføres ikke permanente entry-ID-er. Midlertidige UI-nøkler brukes fortsatt bare under redigering og lagres ikke i JSON.
+
+---
+
+## ADR-0042 – Set-lister bruker cache-first med bakgrunnsrevalidering
+
+Status: Accepted
+
+### Beslutning
+
+Når lokal set-listcache finnes skal Akkordia vise RAM/IndexedDB-data før full OneDrive-lesing er ferdig. OneDrive er fortsatt autoritativ kilde og revalideres i bakgrunnen.
+
+Cachet fellesdata er midlertidig read-only inntil revalidering lykkes. Etter vellykket kontroll regnes set-listene som ferske for gjeldende app-økt. Eksplisitt Oppdater fremtvinger ny OneDrive-lesing.
+
+### Begrunnelse
+
+Set-listlasting består av kataloglisting og én Graph-lesing per JSON-fil og har merkbar ventetid. IndexedDB inneholder allerede komplett datasett for offline-bruk. Cache-first gir derfor offline-lignende responstid uten å introdusere en egen manuell Offline-mode eller endre autoritativ lagring.

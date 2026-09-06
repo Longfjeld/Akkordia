@@ -109,6 +109,16 @@ Scenario B:
 - koble til nett igjen
 - kontrollere oppdatering uten datatap
 
+### 3.9 Cache-first set-lister
+
+- start online med eksisterende IndexedDB-cache
+- åpne Set-lister og kontroller at cache vises før full OneDrive-lesing er ferdig
+- kontroller midlertidig read-only frem til revalidering
+- bytt mellom visninger og kontroller at full Graph-lasting ikke gjentas unødvendig i samme økt
+- bruk eksplisitt Oppdater og kontroller at OneDrive faktisk leses på nytt
+- rediger og lagre etter revalidering og kontroller at eksisterende fil oppdateres uten duplikat
+- gå offline/online og kontroller ny revalidering
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.
