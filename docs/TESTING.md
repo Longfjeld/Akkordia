@@ -134,6 +134,7 @@ Automatiser først ren logikk:
 - migrering
 - set-list med duplikate sang-ID-er
 - storage conflict mapping
+- private notes: offline lagring, konto-isolasjon, notenivå-merge og konfliktkopi
 - transpose-funksjoner
 - autoscroll-beregninger
 

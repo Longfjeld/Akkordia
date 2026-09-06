@@ -7,6 +7,7 @@ import { createSetlist, getActiveSetlistId, loadSetlists, saveSetlist, setActive
 import { renderSetlistEditor } from "./setlist-editor.js";
 import { createPlayer } from "./player.js";
 import { getWorkspaceSnapshot, updateWorkspaceSnapshot } from "./offline.js";
+import { getPrivateNotesState, savePrivateNoteLocal, syncPrivateNotes } from "./private-notes.js";
 
 const ui = {
   accountButton: document.querySelector("#accountButton"),
@@ -48,6 +49,8 @@ let activeView = "songs";
 let currentPlayer = null;
 let songsReadOnly = true;
 let setlistsReadOnly = true;
+let privateNotesState = null;
+let privateNotesSyncTimer = null;
 
 async function start() {
   let authError = null;
@@ -66,6 +69,7 @@ async function start() {
   const workspace = getActiveWorkspace();
   if (workspace) {
     await refreshSongs();
+    await initializePrivateNotes(workspace);
     if (navigator.onLine && getAccount()) await primeSetlistsForOffline();
   }
 
@@ -96,7 +100,7 @@ function renderView() {
   });
 
   if (workspace && !navigator.onLine) {
-    showStatus(`Offline · ${workspace.name} · kun lesing`, false);
+    showStatus(`Offline · ${workspace.name} · fellesdata kun lesing`, false);
   } else if (workspace && activeView === "play") {
     showStatus(`Spill · ${workspace.name}`, false);
   } else if (workspace) {
@@ -118,7 +122,7 @@ function canWriteSetlists() {
 
 function renderConnectivity() {
   const online = navigator.onLine;
-  ui.connectionStatus.textContent = online ? "Online" : "Offline · kun lesing";
+  ui.connectionStatus.textContent = online ? "Online" : "Offline · fellesdata kun lesing";
   ui.connectionStatus.classList.toggle("is-offline", !online);
   ui.accountButton.disabled = !online;
   ui.connectWorkspace.disabled = !online;
@@ -126,7 +130,7 @@ function renderConnectivity() {
   ui.newSetlistButton.disabled = !canWriteSetlists();
 
   if (!online) {
-    showStatus("Offline · bruker sist lagrede data. Redigering er deaktivert.", false);
+    showStatus("Offline · bruker sist lagrede fellesdata. Private notater kan fortsatt redigeres.", false);
   }
 }
 
@@ -297,6 +301,7 @@ function renderSong(song) {
     header.append(meta);
   }
   ui.songDetail.append(header);
+  appendPrivateNotePanel(ui.songDetail, song);
 
   for (const section of song.sections) {
     const block = document.createElement("section");
@@ -404,6 +409,145 @@ async function saveDraft(draft, existingSong) {
   renderSong(draft);
   setSongListMessage(`${songs.length} sanger lastet.`);
   showStatus(`Sangen «${draft.title}» er lagret.`, false);
+}
+
+async function initializePrivateNotes(workspace) {
+  const account = getAccount();
+  if (!workspace || !account) {
+    privateNotesState = null;
+    return;
+  }
+
+  try {
+    privateNotesState = await getPrivateNotesState(account, workspace.workspaceId);
+    if (navigator.onLine) await syncPrivateNotesForWorkspace(workspace, false);
+  } catch (error) {
+    console.warn("Private notater kunne ikke initialiseres:", error);
+  }
+}
+
+async function savePrivateNote(songId, text) {
+  const workspace = getActiveWorkspace();
+  const account = getAccount();
+  if (!workspace || !account) throw new Error("Du må være logget inn for å bruke private notater.");
+
+  privateNotesState = await savePrivateNoteLocal(account, workspace.workspaceId, songId, text);
+  schedulePrivateNotesSync(workspace);
+  return privateNotesState;
+}
+
+function schedulePrivateNotesSync(workspace) {
+  clearTimeout(privateNotesSyncTimer);
+  if (!navigator.onLine || !getAccount()) return;
+  privateNotesSyncTimer = setTimeout(() => {
+    syncPrivateNotesForWorkspace(workspace).catch(error => {
+      console.warn("Synkronisering av private notater feilet:", error);
+    });
+  }, 700);
+}
+
+async function syncPrivateNotesForWorkspace(workspace, rerender = true) {
+  const account = getAccount();
+  if (!workspace || !account || !navigator.onLine) return;
+  try {
+    privateNotesState = await syncPrivateNotes(account, workspace);
+    if (rerender && activeView === "songs" && selectedSongId && !editingSong) {
+      const song = songs.find(item => item.id === selectedSongId);
+      if (song) renderSong(song);
+    }
+  } catch (error) {
+    console.warn("Private notater er lagret lokalt, men OneDrive-synk feilet:", error);
+  }
+}
+
+function appendPrivateNotePanel(container, song) {
+  const account = getAccount();
+  const panel = document.createElement("section");
+  panel.className = "private-note-card";
+  const heading = document.createElement("div");
+  heading.className = "private-note-heading";
+  const title = document.createElement("h2");
+  title.textContent = "Privat notat";
+  const status = document.createElement("span");
+  status.className = "private-note-status muted";
+  heading.append(title, status);
+  panel.append(heading);
+
+  if (!account) {
+    const message = document.createElement("p");
+    message.className = "muted";
+    message.textContent = "Logg inn med Microsoft for å bruke private notater.";
+    panel.append(message);
+    container.append(panel);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.rows = 4;
+  textarea.placeholder = "Dine private notater til denne sangen …";
+  textarea.value = privateNotesState?.notes?.[song.id]?.text ?? "";
+  let saveTimer = null;
+  let pendingText = textarea.value;
+
+  const setLocalStatus = text => {
+    status.textContent = text;
+  };
+
+  const persist = async () => {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    try {
+      setLocalStatus("Lagrer lokalt …");
+      await savePrivateNote(song.id, pendingText);
+      setLocalStatus(navigator.onLine ? "Lagret lokalt · synkroniserer" : "Lagret lokalt · venter på nett");
+    } catch (error) {
+      setLocalStatus("Kunne ikke lagre");
+      console.error(error);
+    }
+  };
+
+  textarea.addEventListener("input", () => {
+    pendingText = textarea.value;
+    setLocalStatus("Endret …");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(persist, 250);
+  });
+  textarea.addEventListener("blur", () => {
+    if (saveTimer) persist();
+  });
+  panel.append(textarea);
+
+  const conflict = privateNotesState?.conflicts?.[song.id];
+  if (conflict?.backup?.text) {
+    const details = document.createElement("details");
+    details.className = "private-note-conflict";
+    const summary = document.createElement("summary");
+    summary.textContent = "Konfliktkopi bevart";
+    const explanation = document.createElement("p");
+    explanation.className = "muted";
+    explanation.textContent = "Samme notat ble endret på en annen enhet. Den tapende teksten er bevart her.";
+    const backup = document.createElement("pre");
+    backup.textContent = conflict.backup.text;
+    const restore = document.createElement("button");
+    restore.type = "button";
+    restore.className = "secondary small";
+    restore.textContent = "Bruk konfliktkopien";
+    restore.addEventListener("click", async () => {
+      textarea.value = conflict.backup.text;
+      pendingText = textarea.value;
+      await persist();
+      const current = songs.find(item => item.id === song.id);
+      if (current) renderSong(current);
+    });
+    details.append(summary, explanation, backup, restore);
+    panel.append(details);
+  }
+
+  const dirty = privateNotesState?.dirtySongIds?.includes(song.id);
+  status.textContent = dirty
+    ? (navigator.onLine ? "Venter på synk" : "Lagret lokalt · venter på nett")
+    : (privateNotesState?.lastSyncedAt ? "Synkronisert" : "Lagres privat");
+  container.append(panel);
 }
 
 async function refreshSetlists() {
@@ -720,6 +864,8 @@ function startSetlistPlayer(setlist) {
     setlist,
     songs,
     lyricsView: getLyricsView(),
+    privateNotes: privateNotesState?.notes ?? {},
+    onPrivateNoteChange: (songId, text) => savePrivateNote(songId, text),
     onExit: () => exitPlayer(setlist)
   });
 }
@@ -818,6 +964,7 @@ ui.selectFolder.addEventListener("click", async () => {
     renderHeader();
     renderView();
     await refreshSongs();
+    await initializePrivateNotes(workspace);
     await primeSetlistsForOffline();
     showStatus(`Bandet «${workspace.name}» er koblet til og klart.`, false);
   } catch (error) {
@@ -938,6 +1085,7 @@ window.addEventListener("online", async () => {
     await primeSetlistsForOffline();
   }
 
+  await syncPrivateNotesForWorkspace(workspace);
   showStatus("Online igjen · data er oppdatert fra OneDrive.", false);
 });
 

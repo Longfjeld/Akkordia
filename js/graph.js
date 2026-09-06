@@ -28,6 +28,18 @@ async function graphFetch(path, options = {}) {
   return response;
 }
 
+export async function postJson(path, value) {
+  const response = await graphFetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      Accept: "application/json"
+    },
+    body: JSON.stringify(value)
+  });
+  return response.json();
+}
+
 export async function getJson(path) {
   const response = await graphFetch(path, {
     headers: { Accept: "application/json" }

@@ -241,7 +241,7 @@ Det skal ikke utvikles flere providere før OneDrive-versjonen er stabil og det 
     └── <setlist-id>.json
 ```
 
-Private notater er ikke tatt inn i denne strukturen ennå. Dette er en bevisst utsatt beslutning.
+Private notater ligger bevisst utenfor denne delte workspace-strukturen. De lagres separat i den innloggede brukerens private OneDrive, med lokal IndexedDB-cache.
 
 ---
 
@@ -565,17 +565,22 @@ Automatisk merge er ikke et krav i første versjon.
 
 ## 14. Private notater
 
-**Status: Utsatt beslutning.**
+**Status: Implementert grunnmodell.**
 
-Private notater finnes som behov i gammel løsning, men v2 har ikke egen Akkordia-brukeridentitet.
+Private notater er personlige data per sang. De er ikke del av sangfilen eller set-listen og lagres aldri i bandets delte workspace.
 
-Mulige fremtidige modeller:
+Valgt modell:
 
-- bare lokalt på enheten
-- privat lagring hos brukerens egen storage-provider
-- fjernes som funksjon
+- lokal arbeidskopi i IndexedDB
+- cache nøkklet på Microsoft-konto + workspace
+- autoritativ kopi i brukerens private OneDrive
+- én `notes.json` per workspace under `Akkordia/private/<workspaceId>/`
+- automatisk synk når nett og autentisering er tilgjengelig
+- ETag for å oppdage samtidig filendring
+- merge på `songId`, slik at ulike noter ikke gir reell konflikt
+- konfliktkopi bevares lokalt når samme note er endret begge steder
 
-Ingen permanent datamodell for private notater skal bygges før dette er besluttet.
+Private notater kan redigeres offline, også når felles sang- og set-listdata ellers er i lesemodus.
 
 ---
 
@@ -973,7 +978,7 @@ Følgende registreres som første beslutninger i `DECISIONS.md` når prosjektet 
 23. Automatisk merge av konflikter er ikke krav i første versjon.
 24. Fontstørrelse kan være lokal innstilling dersom dette kan gjøres med svært liten kompleksitet.
 25. Autoscroll styres av felles sangdata/BPM og skal indikere aktuell posisjon.
-26. Private notater er en eksplisitt utsatt beslutning.
+26. Private notater bruker privat OneDrive-lagring med konto-/workspace-isolert IndexedDB-cache.
 27. Norsk er første UI-språk, men tekstressurser struktureres for enkel senere oversettelse.
 28. Vanilla HTML/CSS/JavaScript og native ES modules foretrekkes.
 29. Framework/build-system innføres bare ved dokumentert behov.
@@ -1093,7 +1098,7 @@ Følgende er bevisst ikke avgjort ennå:
 
 |Tema|Status|
 |:---|:---|
-|Private notater|Avgjøres senere|
+|Private notater|Privat OneDrive + lokal IndexedDB-cache|
 |Eksakt OneDrive OAuth-scope og registreringsoppsett|Må spesifiseres før Fase 3|
 |Eksakt JSON-schema for sang|Fastsettes i Fase 1|
 |Eksakt JSON-schema for set-list|Fastsettes i Fase 1|

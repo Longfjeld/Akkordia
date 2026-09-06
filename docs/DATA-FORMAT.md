@@ -111,6 +111,33 @@ Setlist schema v1 leses fortsatt. Ved lasting normaliseres en v1-fil i minnet ti
 
 Private notater inngår ikke i Setlist schema v2.
 
+## Private notes schema v1
+
+Private notater lagres separat i den innloggede brukerens private OneDrive:
+
+```text
+Akkordia/private/<workspaceId>/notes.json
+```
+
+Eksempel:
+
+```json
+{
+  "format": "akkordia-private-notes",
+  "schemaVersion": 1,
+  "workspaceId": "9cfc64f0-7c47-41f4-8781-b09d3ff98d2e",
+  "updatedAt": "2026-09-06T10:00:00.000Z",
+  "notes": {
+    "<song-id>": {
+      "text": "Capo 2. Start rolig.",
+      "updatedAt": "2026-09-06T09:58:00.000Z"
+    }
+  }
+}
+```
+
+`dirty`, `baseNotes`, ETag og konfliktkopier er lokale synkroniseringsdata og inngår ikke i `notes.json`. Tomt notat betyr sletting av sangens post etter vellykket synk.
+
 ## Lokale brukerpreferanser
 
 Følgende skal lagres lokalt på enheten og ikke i workspace-data:

@@ -230,18 +230,22 @@ Den skal ikke lagres som felles sangdata.
 
 ---
 
-## ADR-0016 – Private notater utsettes
+## ADR-0016 – Private notater lagres i brukerens private OneDrive med lokal cache
 
-**Status:** Deferred  
-**Dato:** 2026-08-29
+**Status:** Accepted  
+**Dato:** 2026-09-06
 
 ### Problem
 
-V2 har ikke egen Akkordia-brukeridentitet, og det er derfor ikke avgjort hvor private notater bør lagres.
+Private notater skal følge personen mellom enheter, kunne brukes offline og ikke være lesbare for andre medlemmer av bandets delte workspace.
 
 ### Beslutning
 
-Funksjonen tas ikke inn i første permanente datamodell før lagrings- og synkroniseringsmodell er besluttet.
+Private notater er per sang, uavhengig av forekomst i set-list. IndexedDB er lokal arbeidskopi og offline-cache, mens brukerens private OneDrive er autoritativ vedvarende lagring mellom enheter.
+
+Hver Microsoft-konto får én `notes.json` per workspace under `Akkordia/private/<workspaceId>/`. Notatene indekseres med stabil `songId`. Lokal cache nøkkles på Microsoft-konto + `workspaceId`, slik at private data ikke deles mellom brukere på samme nettleser.
+
+Lokal lagring skjer først og skal fungere offline. Synkronisering mot OneDrive skjer separat. OneDrive ETag brukes til å oppdage samtidige filendringer, men merge og konfliktavgjørelse skjer på notenivå. Endringer i forskjellige sanger kan derfor flettes automatisk. Hvis samme sangnote er endret begge steder, beholdes vinneren og den tapende teksten lagres lokalt som konfliktkopi.
 
 ---
 

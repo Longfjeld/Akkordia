@@ -6,7 +6,7 @@ const PULSE_KEY = "akkordia.player.visualPulse.v1";
 const COUNT_IN_KEY = "akkordia.player.countIn.v1";
 const COUNT_IN_BEATS = 4;
 
-export function createPlayer(container, { setlist, songs, lyricsView = "both", onExit }) {
+export function createPlayer(container, { setlist, songs, lyricsView = "both", privateNotes = {}, onPrivateNoteChange = null, onExit }) {
   const songById = new Map(songs.map(song => [song.id, song]));
   const entries = buildPlayableEntries(setlist, songById);
   let currentIndex = 0;
@@ -121,6 +121,38 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
     title.textContent = song.title;
     heading.append(title);
     shell.append(heading);
+
+    const note = document.createElement("details");
+    note.className = "player-private-note";
+    note.open = Boolean(privateNotes?.[song.id]?.text);
+    const noteSummary = document.createElement("summary");
+    noteSummary.textContent = "Privat notat";
+    const noteText = document.createElement("textarea");
+    noteText.rows = 3;
+    noteText.placeholder = onPrivateNoteChange ? "Dine private notater til denne sangen …" : "Logg inn med Microsoft for å bruke private notater.";
+    noteText.value = privateNotes?.[song.id]?.text ?? "";
+    noteText.disabled = !onPrivateNoteChange;
+    let noteTimer = null;
+    const persistNote = () => {
+      clearTimeout(noteTimer);
+      noteTimer = null;
+      if (!onPrivateNoteChange) return;
+      const text = noteText.value;
+      if (text.length) privateNotes[song.id] = { text, updatedAt: new Date().toISOString() };
+      else delete privateNotes[song.id];
+      Promise.resolve(onPrivateNoteChange(song.id, text)).catch(error => {
+        console.warn("Privatnotatet kunne ikke lagres:", error);
+      });
+    };
+    noteText.addEventListener("input", () => {
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(persistNote, 250);
+    });
+    noteText.addEventListener("blur", () => {
+      if (noteTimer) persistNote();
+    });
+    note.append(noteSummary, noteText);
+    shell.append(note);
 
     const body = document.createElement("div");
     body.className = "player-song";

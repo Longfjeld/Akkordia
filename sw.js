@@ -1,4 +1,4 @@
-const CACHE_NAME = "akkordia-shell-m8-v1";
+const CACHE_NAME = "akkordia-shell-private-notes-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "./js/offline.js",
   "./js/onedrive.js",
   "./js/player.js",
+  "./js/private-notes.js",
   "./js/setlist-editor.js",
   "./js/setlists.js",
   "./js/songs.js",
