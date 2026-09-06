@@ -52,6 +52,10 @@ let setlistsReadOnly = true;
 let privateNotesState = null;
 let privateNotesSyncTimer = null;
 
+const PRIVATE_NOTES_LOCAL_SAVE_DELAY = 250;
+const PRIVATE_NOTES_SYNC_DELAY = 5000;
+const PRIVATE_NOTES_BLUR_SYNC_DELAY = 500;
+
 async function start() {
   let authError = null;
   try {
@@ -420,44 +424,90 @@ async function initializePrivateNotes(workspace) {
 
   try {
     privateNotesState = await getPrivateNotesState(account, workspace.workspaceId);
-    if (navigator.onLine) await syncPrivateNotesForWorkspace(workspace, false);
+    if (navigator.onLine) await syncPrivateNotesForWorkspace(workspace);
   } catch (error) {
     console.warn("Private notater kunne ikke initialiseres:", error);
   }
 }
 
-async function savePrivateNote(songId, text) {
+async function savePrivateNote(songId, text, { syncDelay = PRIVATE_NOTES_SYNC_DELAY } = {}) {
   const workspace = getActiveWorkspace();
   const account = getAccount();
   if (!workspace || !account) throw new Error("Du må være logget inn for å bruke private notater.");
 
   privateNotesState = await savePrivateNoteLocal(account, workspace.workspaceId, songId, text);
-  schedulePrivateNotesSync(workspace);
+  updatePrivateNoteStatusIndicators();
+  if (syncDelay !== null) schedulePrivateNotesSync(workspace, syncDelay);
   return privateNotesState;
 }
 
-function schedulePrivateNotesSync(workspace) {
+function schedulePrivateNotesSync(workspace, delay = PRIVATE_NOTES_SYNC_DELAY) {
   clearTimeout(privateNotesSyncTimer);
-  if (!navigator.onLine || !getAccount()) return;
+  privateNotesSyncTimer = null;
+  if (!navigator.onLine || !getAccount()) {
+    updatePrivateNoteStatusIndicators();
+    return;
+  }
   privateNotesSyncTimer = setTimeout(() => {
+    privateNotesSyncTimer = null;
+    if (isPrivateNoteEditing()) {
+      updatePrivateNoteStatusIndicators();
+      return;
+    }
     syncPrivateNotesForWorkspace(workspace).catch(error => {
       console.warn("Synkronisering av private notater feilet:", error);
     });
-  }, 700);
+  }, delay);
 }
 
-async function syncPrivateNotesForWorkspace(workspace, rerender = true) {
+function isPrivateNoteEditing() {
+  return Boolean(document.activeElement?.closest?.(".private-note-card textarea, .player-private-note textarea"));
+}
+
+async function syncPrivateNotesForWorkspace(workspace) {
   const account = getAccount();
-  if (!workspace || !account || !navigator.onLine) return;
+  if (!workspace || !account || !navigator.onLine) {
+    updatePrivateNoteStatusIndicators();
+    return;
+  }
+
+  clearTimeout(privateNotesSyncTimer);
+  privateNotesSyncTimer = null;
+  updatePrivateNoteStatusIndicators({ syncing: true });
   try {
     privateNotesState = await syncPrivateNotes(account, workspace);
-    if (rerender && activeView === "songs" && selectedSongId && !editingSong) {
-      const song = songs.find(item => item.id === selectedSongId);
-      if (song) renderSong(song);
-    }
+    updatePrivateNoteStatusIndicators();
   } catch (error) {
+    updatePrivateNoteStatusIndicators();
     console.warn("Private notater er lagret lokalt, men OneDrive-synk feilet:", error);
   }
+}
+
+function updatePrivateNoteStatusIndicators({ syncing = false } = {}) {
+  document.querySelectorAll(".private-note-status[data-song-id]").forEach(status => {
+    const songId = status.dataset.songId;
+    const dirty = privateNotesState?.dirtySongIds?.includes(songId);
+
+    if (syncing && dirty) {
+      status.textContent = "Synkroniserer …";
+      status.disabled = true;
+      status.title = "";
+      return;
+    }
+
+    if (dirty && navigator.onLine) {
+      status.textContent = "Venter på synk";
+      status.disabled = false;
+      status.title = "Trykk for å synkronisere nå";
+      return;
+    }
+
+    status.textContent = dirty
+      ? "Lagret lokalt · venter på nett"
+      : (privateNotesState?.lastSyncedAt ? "Synkronisert" : "Lagres privat");
+    status.disabled = true;
+    status.title = "";
+  });
 }
 
 function appendPrivateNotePanel(container, song) {
@@ -468,8 +518,10 @@ function appendPrivateNotePanel(container, song) {
   heading.className = "private-note-heading";
   const title = document.createElement("h2");
   title.textContent = "Privat notat";
-  const status = document.createElement("span");
+  const status = document.createElement("button");
+  status.type = "button";
   status.className = "private-note-status muted";
+  status.dataset.songId = song.id;
   heading.append(title, status);
   panel.append(heading);
 
@@ -493,13 +545,13 @@ function appendPrivateNotePanel(container, song) {
     status.textContent = text;
   };
 
-  const persist = async () => {
+  const persist = async ({ syncDelay = PRIVATE_NOTES_SYNC_DELAY } = {}) => {
     clearTimeout(saveTimer);
     saveTimer = null;
     try {
       setLocalStatus("Lagrer lokalt …");
-      await savePrivateNote(song.id, pendingText);
-      setLocalStatus(navigator.onLine ? "Lagret lokalt · synkroniserer" : "Lagret lokalt · venter på nett");
+      await savePrivateNote(song.id, pendingText, { syncDelay });
+      updatePrivateNoteStatusIndicators();
     } catch (error) {
       setLocalStatus("Kunne ikke lagre");
       console.error(error);
@@ -510,10 +562,16 @@ function appendPrivateNotePanel(container, song) {
     pendingText = textarea.value;
     setLocalStatus("Endret …");
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(persist, 250);
+    saveTimer = setTimeout(() => persist(), PRIVATE_NOTES_LOCAL_SAVE_DELAY);
   });
-  textarea.addEventListener("blur", () => {
-    if (saveTimer) persist();
+  textarea.addEventListener("blur", async () => {
+    if (saveTimer) await persist({ syncDelay: PRIVATE_NOTES_BLUR_SYNC_DELAY });
+    else if (privateNotesState?.dirtySongIds?.includes(song.id)) schedulePrivateNotesSync(getActiveWorkspace(), PRIVATE_NOTES_BLUR_SYNC_DELAY);
+  });
+  status.addEventListener("click", async () => {
+    if (status.disabled || !navigator.onLine) return;
+    if (saveTimer) await persist({ syncDelay: null });
+    await syncPrivateNotesForWorkspace(getActiveWorkspace());
   });
   panel.append(textarea);
 
@@ -543,11 +601,8 @@ function appendPrivateNotePanel(container, song) {
     panel.append(details);
   }
 
-  const dirty = privateNotesState?.dirtySongIds?.includes(song.id);
-  status.textContent = dirty
-    ? (navigator.onLine ? "Venter på synk" : "Lagret lokalt · venter på nett")
-    : (privateNotesState?.lastSyncedAt ? "Synkronisert" : "Lagres privat");
   container.append(panel);
+  updatePrivateNoteStatusIndicators();
 }
 
 async function refreshSetlists() {
@@ -866,6 +921,9 @@ function startSetlistPlayer(setlist) {
     lyricsView: getLyricsView(),
     privateNotes: privateNotesState?.notes ?? {},
     onPrivateNoteChange: (songId, text) => savePrivateNote(songId, text),
+    onPrivateNoteBlur: () => {
+      if (workspace && privateNotesState?.dirtySongIds?.length) schedulePrivateNotesSync(workspace, PRIVATE_NOTES_BLUR_SYNC_DELAY);
+    },
     onExit: () => exitPlayer(setlist)
   });
 }

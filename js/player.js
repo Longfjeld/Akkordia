@@ -6,7 +6,7 @@ const PULSE_KEY = "akkordia.player.visualPulse.v1";
 const COUNT_IN_KEY = "akkordia.player.countIn.v1";
 const COUNT_IN_BEATS = 4;
 
-export function createPlayer(container, { setlist, songs, lyricsView = "both", privateNotes = {}, onPrivateNoteChange = null, onExit }) {
+export function createPlayer(container, { setlist, songs, lyricsView = "both", privateNotes = {}, onPrivateNoteChange = null, onPrivateNoteBlur = null, onExit }) {
   const songById = new Map(songs.map(song => [song.id, song]));
   const entries = buildPlayableEntries(setlist, songById);
   let currentIndex = 0;
@@ -133,23 +133,26 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
     noteText.value = privateNotes?.[song.id]?.text ?? "";
     noteText.disabled = !onPrivateNoteChange;
     let noteTimer = null;
-    const persistNote = () => {
+    const persistNote = async () => {
       clearTimeout(noteTimer);
       noteTimer = null;
       if (!onPrivateNoteChange) return;
       const text = noteText.value;
       if (text.length) privateNotes[song.id] = { text, updatedAt: new Date().toISOString() };
       else delete privateNotes[song.id];
-      Promise.resolve(onPrivateNoteChange(song.id, text)).catch(error => {
+      try {
+        await Promise.resolve(onPrivateNoteChange(song.id, text));
+      } catch (error) {
         console.warn("Privatnotatet kunne ikke lagres:", error);
-      });
+      }
     };
     noteText.addEventListener("input", () => {
       clearTimeout(noteTimer);
-      noteTimer = setTimeout(persistNote, 250);
+      noteTimer = setTimeout(() => persistNote(), 250);
     });
-    noteText.addEventListener("blur", () => {
-      if (noteTimer) persistNote();
+    noteText.addEventListener("blur", async () => {
+      if (noteTimer) await persistNote();
+      await Promise.resolve(onPrivateNoteBlur?.());
     });
     note.append(noteSummary, noteText);
     shell.append(note);

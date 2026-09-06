@@ -24,6 +24,20 @@ IndexedDB er lokal arbeidskopi. Cache-nøkkelen inneholder både Microsoft-konto
 
 Dette gjør at private notater kan redigeres offline selv om felles sangdata er i lesemodus.
 
+## Synkronisering og redigering
+
+Lokal lagring og OneDrive-synk er bevisst skilt.
+
+- tekst lagres lokalt etter omtrent 250 ms
+- normal OneDrive-synk planlegges omtrent 5 sekunder etter siste endring
+- ny skriving nullstiller 5-sekundersfristen
+- hvis notatfeltet fortsatt har fokus når fristen går ut, utsettes OneDrive-synk til redigeringen avsluttes
+- når notatfeltet forlates, forsøkes synk etter omtrent 500 ms
+- `Venter på synk` kan trykkes for å synkronisere umiddelbart
+- synkronisering re-rendrer ikke sangvisningen eller erstatter et aktivt textarea-felt
+
+Dette er spesielt viktig på iPad/iPhone, der erstatning av textarea under skriving ellers kan lukke skjermtastaturet og avbryte redigeringen.
+
 ## Konflikter
 
 OneDrive ETag beskytter hele `notes.json`. Hvis filen er endret, sammenlignes hver `songId` mot sist synkroniserte baseversjon.

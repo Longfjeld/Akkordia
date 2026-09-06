@@ -1082,7 +1082,20 @@ summary,
   margin-bottom: 0.55rem;
 }
 .private-note-heading h2 { margin: 0; font-size: 1rem; }
-.private-note-status { font-size: 0.82rem; }
+.private-note-status {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.private-note-status:not(:disabled) {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.private-note-status:disabled { opacity: 1; }
 .private-note-card textarea,
 .player-private-note textarea {
   width: 100%;
@@ -1091,7 +1104,6 @@ summary,
   border: 1px solid #d0d7de;
   border-radius: 0.5rem;
   background: #fff;
-  color: inherit;
   font: inherit;
   line-height: 1.4;
 }

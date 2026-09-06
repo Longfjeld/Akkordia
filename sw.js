@@ -1,4 +1,4 @@
-const CACHE_NAME = "akkordia-shell-private-notes-v1";
+const CACHE_NAME = "akkordia-shell-private-notes-9-1-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
