@@ -55,6 +55,36 @@ Song schema v1 følger tidligere dokumentert modell.
 
 `playback` er valgfritt. Dersom feltet mangler, bruker applikasjonen standardverdier ved kjøring.
 
+### Transpose-semantikk
+
+`transpose` er antall halvtoner og kan finnes både på sang- og seksjonsnivå. Verdiene lagres som tall i JSON.
+
+Effektiv transponering i en seksjon er:
+
+```text
+song.transpose + section.transpose
+```
+
+Transponering endrer **ikke** lagret `chord.name`. Den brukes kun ved visning av akkorder i sangvisning og Spill-modus. Dermed kan verdien settes tilbake til `0` uten at akkorddata må konverteres tilbake.
+
+Eksempel:
+
+```json
+{
+  "transpose": 2,
+  "sections": [
+    {
+      "transpose": -1,
+      "lines": [
+        {"chords": [{"name": "C", "pos": 0}]}
+      ]
+    }
+  ]
+}
+```
+
+Her lagres akkorden fortsatt som `C`, men vises som `C#` fordi effektiv transpose er `+1`.
+
 Historisk servermetadata migreres ikke.
 
 ## Setlist schema v2

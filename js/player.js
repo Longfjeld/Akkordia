@@ -1,3 +1,4 @@
+import { effectiveTranspose, transposeChordName } from "./chords.js";
 const DEFAULT_BPM = 90;
 const DEFAULT_BEATS_PER_LINE = 4;
 const FONT_LEVELS = [0.8, 0.9, 1, 1.1, 1.25, 1.4];
@@ -166,7 +167,8 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
       const sectionHeading = document.createElement("h2");
       sectionHeading.textContent = section.label || section.type;
       block.append(sectionHeading);
-      for (const line of section.lines) block.append(renderPlayerLine(line, lyricsView));
+      const transpose = effectiveTranspose(song.transpose, section.transpose);
+      for (const line of section.lines) block.append(renderPlayerLine(line, lyricsView, transpose));
       body.append(block);
     }
     shell.append(body);
@@ -500,7 +502,7 @@ function playbackFor(song) {
   };
 }
 
-function renderPlayerLine(line, view) {
+function renderPlayerLine(line, view, transpose = 0) {
   const row = document.createElement("div");
   row.className = "player-song-line";
 
@@ -510,7 +512,7 @@ function renderPlayerLine(line, view) {
     const span = document.createElement("span");
     span.className = "chord";
     span.style.left = `${chord.pos}ch`;
-    span.textContent = chord.name;
+    span.textContent = transposeChordName(chord.name, transpose);
     chordLine.append(span);
   }
   row.append(chordLine);

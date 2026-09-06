@@ -8,6 +8,7 @@ import { renderSetlistEditor } from "./setlist-editor.js";
 import { createPlayer } from "./player.js";
 import { getWorkspaceSnapshot, updateWorkspaceSnapshot } from "./offline.js";
 import { getPrivateNotesState, savePrivateNoteLocal, syncPrivateNotes } from "./private-notes.js";
+import { effectiveTranspose, transposeChordName } from "./chords.js";
 
 const ui = {
   accountButton: document.querySelector("#accountButton"),
@@ -350,7 +351,7 @@ function renderSong(song) {
   if (song.chordSet.length) {
     const chordSet = document.createElement("p");
     chordSet.className = "chord-set muted";
-    chordSet.textContent = `Akkordsett: ${song.chordSet.join(" · ")}`;
+    chordSet.textContent = `Akkordsett: ${song.chordSet.map(name => transposeChordName(name, song.transpose)).join(" · ")}`;
     header.append(chordSet);
   }
 
@@ -375,23 +376,24 @@ function renderSong(song) {
     if (section.transpose) heading.textContent += ` (${signed(section.transpose)})`;
     block.append(heading);
 
-    for (const line of section.lines) block.append(renderSongLine(line, view));
+    const transpose = effectiveTranspose(song.transpose, section.transpose);
+    for (const line of section.lines) block.append(renderSongLine(line, view, transpose));
     ui.songDetail.append(block);
   }
 }
 
-function renderSongLine(line, view) {
+function renderSongLine(line, view, transpose = 0) {
   const row = document.createElement("div");
   row.className = "song-line";
 
   const chordLine = document.createElement("div");
   chordLine.className = "chord-line";
-  chordLine.setAttribute("aria-label", line.chords.map(chord => chord.name).join(", "));
+  chordLine.setAttribute("aria-label", line.chords.map(chord => transposeChordName(chord.name, transpose)).join(", "));
   for (const chord of line.chords) {
     const span = document.createElement("span");
     span.className = "chord";
     span.style.left = `${chord.pos}ch`;
-    span.textContent = chord.name;
+    span.textContent = transposeChordName(chord.name, transpose);
     chordLine.append(span);
   }
   row.append(chordLine);

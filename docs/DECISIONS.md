@@ -750,3 +750,19 @@ Cachet fellesdata er midlertidig read-only inntil revalidering lykkes. Etter vel
 ### Begrunnelse
 
 Set-listlasting består av kataloglisting og én Graph-lesing per JSON-fil og har merkbar ventetid. IndexedDB inneholder allerede komplett datasett for offline-bruk. Cache-first gir derfor offline-lignende responstid uten å introdusere en egen manuell Offline-mode eller endre autoritativ lagring.
+
+---
+
+## ADR-0043 – Transponering er avledet visning, ikke omskriving av akkorddata
+
+Status: Accepted
+
+### Beslutning
+
+Lagrede akkordnavn beholdes uendret. Ved visning beregnes effektiv transpose som `song.transpose + section.transpose`, og akkordnavn transponeres i en felles ren funksjon som brukes både i Sanger og Spill.
+
+Rotnote og eventuell slash-bass transponeres. Akkordkvalitet/suffiks beholdes. Ukjente symboler beholdes uendret.
+
+### Begrunnelse
+
+Dette gjør transpose reversibelt uten datamigrering eller gjentatt omskriving av sangfilene. Samme sangdata kan vises i annen toneart uten å miste original akkordtekst, og seksjonsvise avvik kan kombineres med sangens globale transpose.

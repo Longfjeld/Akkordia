@@ -29,6 +29,7 @@ Akkordia PWA
 |Komponent|Ansvar|
 |:---|:---|
 |`app.js`|Oppstart, navigasjon og overordnet tilstand|
+|`chords.js`|Ren akkord-/transponeringslogikk for visning|
 |`songs.js`|Sangmodell, visning og redigering|
 |`setlists.js`|Set-list-modell og redigering|
 |`player.js`|Spill-modus, navigasjon, autoscroll og Wake Lock|
@@ -167,6 +168,26 @@ wakeLock state
 ```
 
 Samme `songId` kan forekomme på flere indekser. Navigasjon skal derfor alltid baseres på set-listposisjon, ikke unik sang-ID.
+
+## 8.1 Transponering
+
+Transponering er en ren visningsoperasjon. Lagrede akkordnavn i sang-JSON endres ikke når `transpose` endres.
+
+Effektiv transponering for en seksjon beregnes som:
+
+```text
+song.transpose + section.transpose
+```
+
+`chords.js` transponerer rottonen og eventuell slash-bass. Akkordkvalitet/suffiks beholdes uendret. Eksempel:
+
+```text
+Cmaj7   +2 → Dmaj7
+F#m     +2 → G#m
+C/G     +2 → D/A
+```
+
+Vanlig sangvisning og Spill-modus skal bruke samme funksjon. Editor viser og lagrer original akkordtekst og transpose-verdier; den omskriver ikke akkorddata. Ukjente symboler som ikke kan tolkes som et akkordnavn beholdes uendret.
 
 ## 9. Autoscroll
 

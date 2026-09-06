@@ -1,4 +1,4 @@
-const CACHE_NAME = "akkordia-shell-cache-first-setlists-10-v1";
+const CACHE_NAME = "akkordia-shell-transpose-11-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/auth.js",
   "./js/config.js",
+  "./js/chords.js",
   "./js/editor.js",
   "./js/graph.js",
   "./js/offline.js",

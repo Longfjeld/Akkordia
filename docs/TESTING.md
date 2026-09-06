@@ -119,6 +119,18 @@ Scenario B:
 - rediger og lagre etter revalidering og kontroller at eksisterende fil oppdateres uten duplikat
 - gå offline/online og kontroller ny revalidering
 
+### 3.10 Transponering
+
+- sett `song.transpose` til `+2` og kontroller at f.eks. `C` vises som `D`
+- sett `song.transpose` til `-2` og kontroller at `C` vises som `Bb`
+- sett `song.transpose = +2` og `section.transpose = -1` og kontroller effektiv `+1`
+- kontroller at akkordkvalitet beholdes, f.eks. `F#m` → `G#m` ved `+2`
+- kontroller slash-akkord, f.eks. `C/G` → `D/A` ved `+2`
+- kontroller både vanlig sangvisning og Spill-modus
+- lagre sangen og kontroller at `chord.name` i JSON fortsatt er originalverdien
+- sett transpose tilbake til `0` og kontroller at originalakkordene vises igjen
+- kjør `npm run test:transpose`
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.

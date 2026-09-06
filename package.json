@@ -2,7 +2,8 @@
   "name": "akkordia",
   "private": true,
   "scripts": {
-    "vendor:msal": "node tools/vendor-msal.mjs"
+    "vendor:msal": "node tools/vendor-msal.mjs",
+    "test:transpose": "node --no-warnings tools/test-transpose.mjs"
   },
   "dependencies": {
     "@azure/msal-browser": "5.20.0"

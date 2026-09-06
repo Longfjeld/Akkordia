@@ -968,7 +968,7 @@ Følgende registreres som første beslutninger i `DECISIONS.md` når prosjektet 
 11. Én JSON-fil brukes per set-list.
 12. Eksisterende sang-ID-er beholdes ved migrering.
 13. BPM og transponering er felles sangdata.
-14. Transponering støttes på sang- og seksjonsnivå.
+14. Transponering støttes på sang- og seksjonsnivå og anvendes som ren visningslogikk på akkordnavn i Sanger og Spill.
 15. Samme sang kan forekomme flere ganger i én set-list.
 16. Fritekstposter er ikke del av set-list-modellen i første versjon.
 17. Set-lister og Spill-modus er hovedfunksjoner i UI.
