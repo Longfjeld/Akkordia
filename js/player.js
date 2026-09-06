@@ -1,16 +1,30 @@
 const DEFAULT_BPM = 90;
 const DEFAULT_BEATS_PER_LINE = 4;
+const FONT_LEVELS = [0.8, 0.9, 1, 1.1, 1.25, 1.4];
+const FONT_KEY = "akkordia.player.fontScale.v1";
+const PULSE_KEY = "akkordia.player.visualPulse.v1";
+const COUNT_IN_KEY = "akkordia.player.countIn.v1";
+const COUNT_IN_BEATS = 4;
 
 export function createPlayer(container, { setlist, songs, lyricsView = "both", onExit }) {
   const songById = new Map(songs.map(song => [song.id, song]));
   const entries = buildPlayableEntries(setlist, songById);
   let currentIndex = 0;
   let lineIndex = 0;
-  let timer = null;
+  let scrollTimer = null;
   let running = false;
   let autoButton = null;
   let wakeLock = null;
   let destroyed = false;
+
+  let fontScale = readFontScale();
+  let pulseEnabled = readBoolean(PULSE_KEY, false);
+  let countInEnabled = readBoolean(COUNT_IN_KEY, false);
+  let pulseTimer = null;
+  let pulseFlashTimer = null;
+  let pulseIndicator = null;
+  let bpmLabel = null;
+  let countInRemaining = 0;
 
   if (!entries.length) {
     container.replaceChildren();
@@ -26,11 +40,13 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
 
   const shell = document.createElement("section");
   shell.className = "player-shell";
+  shell.style.setProperty("--player-font-scale", String(fontScale));
   document.body.classList.add("is-playing");
   container.replaceChildren(shell);
 
   document.addEventListener("visibilitychange", onVisibilityChange);
   render();
+  syncPulseClock(true);
   requestWakeLock();
 
   return { destroy };
@@ -38,47 +54,72 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
   function render() {
     const entry = entries[currentIndex];
     const song = entry.song;
+    const playback = playbackFor(song);
     shell.replaceChildren();
 
     const top = document.createElement("header");
     top.className = "player-topbar";
 
-    const exit = button("Avslutt", "secondary player-exit");
+    const exit = button("×", "secondary player-exit");
+    exit.title = "Avslutt Spill";
+    exit.setAttribute("aria-label", "Avslutt Spill");
     exit.addEventListener("click", onExit);
 
-    const identity = document.createElement("div");
-    identity.className = "player-identity";
-    const setlistName = document.createElement("strong");
-    setlistName.textContent = setlist.name;
+    const identity = button("", "player-identity-button");
+    identity.setAttribute("aria-label", "Åpne set-list");
+    const context = document.createElement("strong");
+    context.textContent = entry.partName || "Set-list";
     const position = document.createElement("span");
     position.className = "muted";
     position.textContent = `${currentIndex + 1} / ${entries.length}`;
-    identity.append(setlistName, position);
+    identity.append(context, position);
+    identity.addEventListener("click", openSetlistDialog);
 
-    const jump = document.createElement("details");
-    jump.className = "player-jump";
-    const summary = document.createElement("summary");
-    summary.textContent = "Set-list";
-    jump.append(summary, renderJumpList());
+    const tools = document.createElement("div");
+    tools.className = "player-top-tools";
 
-    top.append(exit, identity, jump);
+    const bpm = button("", `player-bpm${pulseEnabled ? " is-enabled" : ""}`);
+    bpm.title = pulseEnabled ? "Slå av visuell puls" : "Slå på visuell puls";
+    bpm.setAttribute("aria-pressed", String(pulseEnabled));
+    pulseIndicator = document.createElement("span");
+    pulseIndicator.className = "player-beat-dot";
+    pulseIndicator.setAttribute("aria-hidden", "true");
+    bpmLabel = document.createElement("span");
+    bpmLabel.textContent = `${playback.bpm} BPM`;
+    bpm.append(pulseIndicator, bpmLabel);
+    bpm.addEventListener("click", () => {
+      pulseEnabled = !pulseEnabled;
+      localStorage.setItem(PULSE_KEY, String(pulseEnabled));
+      bpm.classList.toggle("is-enabled", pulseEnabled);
+      bpm.setAttribute("aria-pressed", String(pulseEnabled));
+      bpm.title = pulseEnabled ? "Slå av visuell puls" : "Slå på visuell puls";
+      syncPulseClock(true);
+    });
+
+    const fontControls = document.createElement("div");
+    fontControls.className = "player-font-controls";
+    const smaller = button("−", "secondary player-font-step");
+    smaller.setAttribute("aria-label", "Mindre tekst");
+    const fontLabel = document.createElement("span");
+    fontLabel.className = "player-font-label";
+    fontLabel.textContent = "A";
+    const larger = button("+", "secondary player-font-step");
+    larger.setAttribute("aria-label", "Større tekst");
+    smaller.disabled = fontScale <= FONT_LEVELS[0];
+    larger.disabled = fontScale >= FONT_LEVELS.at(-1);
+    smaller.addEventListener("click", () => changeFont(-1));
+    larger.addEventListener("click", () => changeFont(1));
+    fontControls.append(smaller, fontLabel, larger);
+
+    tools.append(bpm, fontControls);
+    top.append(exit, identity, tools);
     shell.append(top);
 
     const heading = document.createElement("div");
     heading.className = "player-song-heading";
-    if (entry.partName) {
-      const part = document.createElement("div");
-      part.className = "player-part";
-      part.textContent = entry.partName;
-      heading.append(part);
-    }
     const title = document.createElement("h1");
     title.textContent = song.title;
-    const playback = playbackFor(song);
-    const meta = document.createElement("div");
-    meta.className = "player-meta muted";
-    meta.textContent = `${playback.bpm} BPM · ${playback.beatsPerLine} beats/linje${song.playback ? "" : " · standard"}`;
-    heading.append(title, meta);
+    heading.append(title);
     shell.append(heading);
 
     const body = document.createElement("div");
@@ -97,15 +138,16 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
 
     const controls = document.createElement("footer");
     controls.className = "player-controls";
-    const previous = button("← Forrige", "secondary");
+    const previous = button("← Forrige", "secondary player-nav-button");
     previous.disabled = currentIndex === 0;
     previous.addEventListener("click", () => goTo(currentIndex - 1));
 
-    const auto = button(running ? "Pause autoscroll" : "Start autoscroll", "primary player-autoscroll");
+    const auto = button("", "primary player-autoscroll");
     autoButton = auto;
     auto.addEventListener("click", toggleAutoscroll);
+    updateAutoscrollButton();
 
-    const next = button("Neste →", "secondary");
+    const next = button("Neste →", "secondary player-nav-button");
     next.disabled = currentIndex === entries.length - 1;
     next.addEventListener("click", () => goTo(currentIndex + 1));
 
@@ -113,34 +155,112 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
     shell.append(controls);
 
     updateActiveLine();
+    syncPulseClock(true);
   }
 
-  function renderJumpList() {
+  function openSetlistDialog() {
+    const dialog = document.createElement("dialog");
+    dialog.className = "player-setlist-dialog";
+
+    const panel = document.createElement("div");
+    panel.className = "player-setlist-panel";
+    const header = document.createElement("header");
+    header.className = "player-setlist-dialog-header";
+    const heading = document.createElement("div");
+    const title = document.createElement("h2");
+    title.textContent = setlist.name;
+    const sub = document.createElement("p");
+    sub.className = "muted";
+    sub.textContent = `${currentIndex + 1} / ${entries.length}`;
+    heading.append(title, sub);
+    const close = button("×", "secondary player-dialog-close");
+    close.setAttribute("aria-label", "Lukk set-list");
+    close.addEventListener("click", () => dialog.close());
+    header.append(heading, close);
+
+    const preferences = document.createElement("div");
+    preferences.className = "player-performance-settings";
+    preferences.append(
+      checkboxSetting("Visuell BPM-puls", pulseEnabled, value => {
+        pulseEnabled = value;
+        localStorage.setItem(PULSE_KEY, String(value));
+        syncPulseClock(true);
+        render();
+      }),
+      checkboxSetting("Count-in: 4 slag før Auto", countInEnabled, value => {
+        countInEnabled = value;
+        localStorage.setItem(COUNT_IN_KEY, String(value));
+      })
+    );
+
     const list = document.createElement("div");
-    list.className = "player-jump-list";
+    list.className = "player-overlay-list";
     let lastPart = null;
+    let partNumber = 0;
     entries.forEach((entry, index) => {
-      if (entry.partName && entry.partName !== lastPart) {
-        const part = document.createElement("div");
-        part.className = "player-jump-part";
-        part.textContent = entry.partName;
-        list.append(part);
+      if (entry.partName !== lastPart) {
+        if (entry.partName) {
+          const part = document.createElement("div");
+          part.className = "player-overlay-part";
+          part.textContent = entry.partName;
+          list.append(part);
+        }
         lastPart = entry.partName;
+        partNumber = 0;
       }
-      const item = button(`${index + 1}. ${entry.song.title}`, "player-jump-song");
+      partNumber += 1;
+      const item = button("", "player-overlay-song");
       item.classList.toggle("is-current", index === currentIndex);
-      item.addEventListener("click", event => {
+      const number = document.createElement("span");
+      number.className = "player-overlay-number";
+      number.textContent = String(partNumber);
+      const name = document.createElement("span");
+      name.textContent = entry.song.title;
+      item.append(number, name);
+      item.addEventListener("click", () => {
+        dialog.close();
         goTo(index);
-        event.currentTarget.closest("details")?.removeAttribute("open");
       });
       list.append(item);
     });
-    return list;
+
+    panel.append(header, preferences, list);
+    dialog.append(panel);
+    shell.append(dialog);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.showModal();
+  }
+
+  function checkboxSetting(labelText, checked, onChange) {
+    const label = document.createElement("label");
+    label.className = "player-setting-row";
+    const text = document.createElement("span");
+    text.textContent = labelText;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    input.addEventListener("change", () => onChange(input.checked));
+    label.append(text, input);
+    return label;
+  }
+
+  function changeFont(direction) {
+    let index = FONT_LEVELS.findIndex(value => value === fontScale);
+    if (index < 0) index = FONT_LEVELS.indexOf(1);
+    index = Math.max(0, Math.min(FONT_LEVELS.length - 1, index + direction));
+    fontScale = FONT_LEVELS[index];
+    localStorage.setItem(FONT_KEY, String(fontScale));
+    shell.style.setProperty("--player-font-scale", String(fontScale));
+    render();
   }
 
   function goTo(index) {
     if (index < 0 || index >= entries.length || index === currentIndex) return;
     stopAutoscroll();
+    cancelCountIn();
     currentIndex = index;
     lineIndex = 0;
     render();
@@ -148,45 +268,129 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
   }
 
   function toggleAutoscroll() {
-    if (running) stopAutoscroll();
-    else startAutoscroll();
+    if (running || countInRemaining > 0) {
+      stopAutoscroll();
+      cancelCountIn();
+    } else if (countInEnabled) {
+      beginCountIn();
+    } else {
+      startAutoscroll();
+    }
     updateAutoscrollButton();
   }
 
-  function startAutoscroll() {
+  function beginCountIn() {
+    countInRemaining = COUNT_IN_BEATS;
+    updateAutoscrollButton();
+    syncPulseClock(false);
+  }
+
+  function cancelCountIn() {
+    countInRemaining = 0;
+    updateAutoscrollButton();
+    syncPulseClock(false);
+  }
+
+  function startAutoscroll(preserveBeatFlash = false) {
     const lines = getLines();
     if (!lines.length) return;
+    countInRemaining = 0;
     running = true;
     updateActiveLine(true);
-    scheduleNext();
+    scheduleNextLine();
+    updateAutoscrollButton();
+    if (!preserveBeatFlash) syncPulseClock(false);
   }
 
   function stopAutoscroll() {
     running = false;
-    if (timer) clearTimeout(timer);
-    timer = null;
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = null;
+    updateAutoscrollButton();
   }
 
-  function scheduleNext() {
+  function scheduleNextLine() {
     if (!running || destroyed) return;
     const song = entries[currentIndex].song;
     const playback = playbackFor(song);
     const delay = (60000 / playback.bpm) * playback.beatsPerLine;
-    timer = setTimeout(() => {
+    scrollTimer = setTimeout(() => {
       const lines = getLines();
       if (lineIndex < lines.length - 1) {
         lineIndex += 1;
         updateActiveLine(true);
-        scheduleNext();
+        scheduleNextLine();
       } else {
         stopAutoscroll();
-        updateAutoscrollButton();
       }
     }, delay);
   }
 
   function updateAutoscrollButton() {
-    if (autoButton) autoButton.textContent = running ? "Pause autoscroll" : "Start autoscroll";
+    if (!autoButton) return;
+    if (countInRemaining > 0) {
+      autoButton.textContent = `${countInRemaining} · Auto`;
+      autoButton.setAttribute("aria-label", `Count-in ${countInRemaining} slag igjen. Trykk for å avbryte.`);
+    } else if (running) {
+      autoButton.textContent = "⏸ Auto";
+      autoButton.setAttribute("aria-label", "Pause autoscroll");
+    } else {
+      autoButton.textContent = "▶ Auto";
+      autoButton.setAttribute("aria-label", countInEnabled ? "Start autoscroll med 4 slag count-in" : "Start autoscroll");
+    }
+  }
+
+  function syncPulseClock(resetPhase) {
+    const shouldRun = pulseEnabled || countInRemaining > 0;
+    if (!shouldRun) {
+      clearPulseClock();
+      return;
+    }
+    if (pulseTimer && !resetPhase) return;
+    clearPulseClock();
+    scheduleBeat(resetPhase ? 0 : beatDelay());
+  }
+
+  function scheduleBeat(delay) {
+    if (destroyed || (!pulseEnabled && countInRemaining <= 0)) return;
+    pulseTimer = setTimeout(() => {
+      pulseTimer = null;
+      onBeat();
+      scheduleBeat(beatDelay());
+    }, Math.max(0, delay));
+  }
+
+  function onBeat() {
+    flashBeat();
+    if (countInRemaining > 0) {
+      countInRemaining -= 1;
+      updateAutoscrollButton();
+      if (countInRemaining === 0) {
+        startAutoscroll(true);
+      }
+    }
+  }
+
+  function beatDelay() {
+    return 60000 / playbackFor(entries[currentIndex].song).bpm;
+  }
+
+  function flashBeat() {
+    if (!pulseIndicator) return;
+    pulseIndicator.classList.add("is-beat");
+    if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
+    pulseFlashTimer = setTimeout(() => {
+      pulseIndicator?.classList.remove("is-beat");
+      pulseFlashTimer = null;
+    }, Math.min(160, beatDelay() * 0.35));
+  }
+
+  function clearPulseClock() {
+    if (pulseTimer) clearTimeout(pulseTimer);
+    if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
+    pulseTimer = null;
+    pulseFlashTimer = null;
+    pulseIndicator?.classList.remove("is-beat");
   }
 
   function getLines() {
@@ -217,12 +421,20 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", o
   }
 
   function onVisibilityChange() {
-    if (!destroyed && document.visibilityState === "visible" && !wakeLock) requestWakeLock();
+    if (destroyed) return;
+    if (document.visibilityState === "visible") {
+      if (!wakeLock) requestWakeLock();
+      syncPulseClock(true);
+    } else {
+      clearPulseClock();
+    }
   }
 
   function destroy() {
     destroyed = true;
     stopAutoscroll();
+    cancelCountIn();
+    clearPulseClock();
     document.removeEventListener("visibilitychange", onVisibilityChange);
     releaseWakeLock();
     document.body.classList.remove("is-playing");
@@ -281,6 +493,18 @@ function renderPlayerLine(line, view) {
     row.append(harmony);
   }
   return row;
+}
+
+function readFontScale() {
+  const value = Number(localStorage.getItem(FONT_KEY));
+  return FONT_LEVELS.includes(value) ? value : 1;
+}
+
+function readBoolean(key, fallback) {
+  const value = localStorage.getItem(key);
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
 }
 
 function button(label, className = "") {
