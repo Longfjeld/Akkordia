@@ -14,12 +14,14 @@ Brukerens OneDrive/
 
 IndexedDB er lokal arbeidskopi. Cache-nøkkelen inneholder både Microsoft-kontoens stabile konto-ID og `workspaceId`.
 
+For personlige, ikke delte enheter husker appen sist brukte private-note-konto-ID lokalt. Dermed kan samme IndexedDB-cache åpnes også når Microsoft-økten ikke er aktiv. Konto-ID-en brukes bare som lokal cache-identitet; den gir ingen Graph-tilgang og er ikke et autentiseringstoken.
+
 ## Lagringsflyt
 
 1. Redigering lagres lokalt i IndexedDB.
 2. Sangen markeres dirty.
 3. UI kan fortsette uten å vente på Microsoft Graph.
-4. Når nett og token er tilgjengelig synkroniseres `notes.json`.
+4. Når nett og aktiv Microsoft-innlogging er tilgjengelig synkroniseres `notes.json`.
 5. Etter bekreftet synk blir den sammenslåtte kopien ny baseversjon og dirty-listen tømmes.
 
 Dette gjør at private notater kan redigeres offline selv om felles sangdata er i lesemodus.
@@ -67,3 +69,10 @@ Private notater skal derfor være både synlige og redigerbare etter full omstar
 ## Offline kontra eksplisitt utlogging
 
 Offline med en fortsatt kjent Microsoft-konto skal bruke den konto-/workspace-isolerte IndexedDB-cachen og tillate lokal redigering. Eksplisitt utlogging er annerledes: uten kontoidentitet skal Akkordia ikke velge eller vise en tidligere brukers private cache. Brukeren må logge inn igjen før private notater vises.
+
+
+## Utlogget bruk
+
+Etter at private notater minst én gang er etablert med en Microsoft-konto på enheten, kan de leses og redigeres lokalt også når brukeren er online men utlogget. Lokale endringer markeres dirty og venter på neste innlogging med samme konto før de synkroniseres.
+
+En ny Microsoft-konto bruker sin egen konto-/workspace-isolerte cache.

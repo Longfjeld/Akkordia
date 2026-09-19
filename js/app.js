@@ -7,7 +7,7 @@ import { createSetlist, getActiveSetlistId, loadSetlists, saveSetlist, setActive
 import { renderSetlistEditor } from "./setlist-editor.js";
 import { createPlayer } from "./player.js";
 import { getWorkspaceSnapshot, updateWorkspaceSnapshot } from "./offline.js";
-import { getPrivateNotesState, savePrivateNoteLocal, syncPrivateNotes } from "./private-notes.js";
+import { getPrivateNotesAccountId, getPrivateNotesState, getRememberedPrivateNotesAccountId, rememberPrivateNotesAccount, savePrivateNoteLocal, syncPrivateNotes } from "./private-notes.js";
 import { effectiveTranspose, transposeChordName } from "./chords.js";
 
 const ui = {
@@ -479,16 +479,34 @@ async function saveDraft(draft, existingSong) {
   showStatus(`Sangen «${draft.title}» er lagret.`, false);
 }
 
+function getPrivateNotesOwnerId() {
+  const account = getAccount();
+  if (account) return rememberPrivateNotesAccount(account);
+  return getRememberedPrivateNotesAccountId();
+}
+
+function canSyncPrivateNotes() {
+  const account = getAccount();
+  const accountId = getPrivateNotesAccountId(account);
+  return Boolean(
+    navigator.onLine &&
+    accountId &&
+    privateNotesState?.accountId &&
+    accountId === privateNotesState.accountId
+  );
+}
+
 async function initializePrivateNotes(workspace) {
   const account = getAccount();
-  if (!workspace || !account) {
+  const ownerId = getPrivateNotesOwnerId();
+  if (!workspace || !ownerId) {
     privateNotesState = null;
     return;
   }
 
   try {
-    privateNotesState = await getPrivateNotesState(account, workspace.workspaceId);
-    if (navigator.onLine) await syncPrivateNotesForWorkspace(workspace);
+    privateNotesState = await getPrivateNotesState(ownerId, workspace.workspaceId);
+    if (account && navigator.onLine) await syncPrivateNotesForWorkspace(workspace);
   } catch (error) {
     console.warn("Private notater kunne ikke initialiseres:", error);
   }
@@ -496,19 +514,19 @@ async function initializePrivateNotes(workspace) {
 
 async function savePrivateNote(songId, text, { syncDelay = PRIVATE_NOTES_SYNC_DELAY } = {}) {
   const workspace = getActiveWorkspace();
-  const account = getAccount();
-  if (!workspace || !account) throw new Error("Du må være logget inn for å bruke private notater.");
+  const ownerId = getPrivateNotesOwnerId();
+  if (!workspace || !ownerId) throw new Error("Ingen lokal profil for private notater er tilgjengelig.");
 
-  privateNotesState = await savePrivateNoteLocal(account, workspace.workspaceId, songId, text);
+  privateNotesState = await savePrivateNoteLocal(ownerId, workspace.workspaceId, songId, text);
   updatePrivateNoteStatusIndicators();
-  if (syncDelay !== null) schedulePrivateNotesSync(workspace, syncDelay);
+  if (syncDelay !== null && canSyncPrivateNotes()) schedulePrivateNotesSync(workspace, syncDelay);
   return privateNotesState;
 }
 
 function schedulePrivateNotesSync(workspace, delay = PRIVATE_NOTES_SYNC_DELAY) {
   clearTimeout(privateNotesSyncTimer);
   privateNotesSyncTimer = null;
-  if (!navigator.onLine || !getAccount()) {
+  if (!canSyncPrivateNotes()) {
     updatePrivateNoteStatusIndicators();
     return;
   }
@@ -530,7 +548,7 @@ function isPrivateNoteEditing() {
 
 async function syncPrivateNotesForWorkspace(workspace) {
   const account = getAccount();
-  if (!workspace || !account || !navigator.onLine) {
+  if (!workspace || !account || !canSyncPrivateNotes()) {
     updatePrivateNoteStatusIndicators();
     return;
   }
@@ -559,23 +577,32 @@ function updatePrivateNoteStatusIndicators({ syncing = false } = {}) {
       return;
     }
 
-    if (dirty && navigator.onLine) {
+    if (dirty && canSyncPrivateNotes()) {
       status.textContent = "Venter på synk";
       status.disabled = false;
       status.title = "Trykk for å synkronisere nå";
       return;
     }
 
-    status.textContent = dirty
-      ? "Lagret lokalt · venter på nett"
-      : (privateNotesState?.lastSyncedAt ? "Synkronisert" : "Lagres privat");
+    if (dirty) {
+      status.textContent = navigator.onLine
+        ? "Lagret lokalt · logg inn for synk"
+        : "Lagret lokalt · venter på nett";
+      status.disabled = true;
+      status.title = "";
+      return;
+    }
+
+    status.textContent = getAccount()
+      ? (privateNotesState?.lastSyncedAt ? "Synkronisert" : "Lagres privat")
+      : "Tilgjengelig lokalt";
     status.disabled = true;
     status.title = "";
   });
 }
 
 function appendPrivateNotePanel(container, song) {
-  const account = getAccount();
+  const ownerId = getPrivateNotesOwnerId();
   const panel = document.createElement("section");
   panel.className = "private-note-card";
   const heading = document.createElement("div");
@@ -589,10 +616,10 @@ function appendPrivateNotePanel(container, song) {
   heading.append(title, status);
   panel.append(heading);
 
-  if (!account) {
+  if (!ownerId) {
     const message = document.createElement("p");
     message.className = "muted";
-    message.textContent = "Logg inn med Microsoft for å bruke private notater.";
+    message.textContent = "Logg inn med Microsoft én gang for å aktivere private notater på denne enheten.";
     panel.append(message);
     container.append(panel);
     return;
@@ -633,7 +660,7 @@ function appendPrivateNotePanel(container, song) {
     else if (privateNotesState?.dirtySongIds?.includes(song.id)) schedulePrivateNotesSync(getActiveWorkspace(), PRIVATE_NOTES_BLUR_SYNC_DELAY);
   });
   status.addEventListener("click", async () => {
-    if (status.disabled || !navigator.onLine) return;
+    if (status.disabled || !canSyncPrivateNotes()) return;
     if (saveTimer) await persist({ syncDelay: null });
     await syncPrivateNotesForWorkspace(getActiveWorkspace());
   });

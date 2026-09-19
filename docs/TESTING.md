@@ -160,6 +160,25 @@ Scenario B:
 - kontroller at BPM-prikk og kant oppleves synkronisert
 - kontroller at eksplisitt utlogging ikke viser cachede private notater, mens offline med kjent konto gjør det
 
+
+### 3.11 Private notater uten aktiv Microsoft-økt
+
+- synkroniser privatnotat mens samme konto er innlogget
+- logg ut, men behold nettverk
+- kontroller at notatet fortsatt vises fra IndexedDB
+- rediger og kontroller status `Lagret lokalt · logg inn for synk`
+- start appen på nytt og kontroller at lokal endring består
+- logg inn igjen med samme konto og kontroller synk
+- kontroller at en annen Microsoft-konto ikke bruker den første kontoens cache
+
+### 3.12 Flerfarget BPM-puls
+
+- kontroller cyan/blå/fiolett/magenta kant i Spill-modus
+- test synlighet perifert
+- test ca. 60 og 180 BPM
+- kontroller fast ca. 300 ms pulsvarighet
+- kontroller av/på, count-in og autoscroll
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.

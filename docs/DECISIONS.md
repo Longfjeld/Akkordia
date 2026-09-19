@@ -766,3 +766,28 @@ Rotnote og eventuell slash-bass transponeres. Akkordkvalitet/suffiks beholdes. U
 ### Begrunnelse
 
 Dette gjør transpose reversibelt uten datamigrering eller gjentatt omskriving av sangfilene. Samme sangdata kan vises i annen toneart uten å miste original akkordtekst, og seksjonsvise avvik kan kombineres med sangens globale transpose.
+
+
+---
+
+## ADR-0044 – Sist brukte private-note-identitet kan huskes lokalt
+
+**Status:** Accepted  
+**Dato:** 2026-09-19
+
+### Problem
+
+Private notater er allerede lokale/offline-kapable, men aktiv Microsoft-innlogging var fortsatt nødvendig for å finne kontoens IndexedDB-cache. Dette gjorde notatene utilgjengelige ved utløpt eller avsluttet Microsoft-økt selv om dataene lå lokalt.
+
+### Beslutning
+
+På personlige, ikke delte enheter kan Akkordia huske sist brukte stabile Microsoft-konto-ID lokalt og bruke den til å åpne samme konto-/workspace-isolerte private-note-cache uten aktiv innlogging.
+
+Det lagres ikke token eller autentiseringshemmelighet. OneDrive-synk krever fortsatt aktiv Microsoft-innlogging, og innlogging med en annen konto bytter til den kontoens separate cache.
+
+### Konsekvenser
+
+- private notater kan leses og redigeres lokalt både offline og online-utlogget
+- lokale endringer venter på senere synk
+- løsningen forutsetter at enheten ikke brukes som delt flerbrukerenhet
+- full profilvelger for delte enheter er utenfor scope

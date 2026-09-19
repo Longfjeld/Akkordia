@@ -8,9 +8,21 @@ const ROOT_FOLDER = "Akkordia";
 const PRIVATE_FOLDER = "private";
 const NOTES_FILE = "notes.json";
 const SCHEMA_VERSION = 1;
+const LAST_ACCOUNT_KEY = "akkordia.privateNotes.lastAccountId.v1";
 
 export function getPrivateNotesAccountId(account) {
+  if (typeof account === "string") return account || null;
   return account?.homeAccountId || account?.localAccountId || account?.username || null;
+}
+
+export function rememberPrivateNotesAccount(account) {
+  const accountId = getPrivateNotesAccountId(account);
+  if (accountId) localStorage.setItem(LAST_ACCOUNT_KEY, accountId);
+  return accountId;
+}
+
+export function getRememberedPrivateNotesAccountId() {
+  return localStorage.getItem(LAST_ACCOUNT_KEY) || null;
 }
 
 export async function getPrivateNotesState(account, workspaceId) {
@@ -30,7 +42,7 @@ export async function getPrivateNote(account, workspaceId, songId) {
 
 export async function savePrivateNoteLocal(account, workspaceId, songId, text) {
   const accountId = getPrivateNotesAccountId(account);
-  if (!accountId) throw new Error("Du må være logget inn for å bruke private notater.");
+  if (!accountId) throw new Error("Ingen lokal profil for private notater er tilgjengelig.");
   if (!workspaceId || !songId) throw new Error("Privatnotatet mangler workspace eller sang-ID.");
 
   const state = (await readRecord(accountId, workspaceId)) ?? emptyState(accountId, workspaceId);

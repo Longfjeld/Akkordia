@@ -753,27 +753,41 @@ body.is-playing .play-view { display: block !important; }
   inset: 0;
   z-index: 100;
   pointer-events: none;
-  border: 4px solid rgb(22 135 255 / 8%);
-  border-radius: 0.8rem;
-  box-shadow: inset 0 0 0.75rem rgb(22 135 255 / 4%);
-  opacity: 0.16;
+  padding: 4px;
+  border-radius: 0.9rem;
+  background: conic-gradient(
+    from 32deg,
+    #00d9ff 0deg,
+    #1677ff 82deg,
+    #7c3cff 170deg,
+    #ff3f9f 258deg,
+    #00d9ff 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.1;
+  filter: saturate(1.2);
 }
 .player-shell.has-visual-pulse.is-beat::after {
   animation: player-edge-beat 300ms cubic-bezier(.18,.72,.28,1) both;
 }
 @keyframes player-edge-beat {
   0% {
-    border-color: rgb(0 142 255 / 100%);
-    box-shadow:
-      inset 0 0 0.75rem rgb(0 142 255 / 78%),
-      inset 0 0 2.25rem rgb(0 190 255 / 48%),
-      inset 0 0 4.5rem rgb(45 120 255 / 20%);
     opacity: 1;
+    filter:
+      saturate(1.75)
+      brightness(1.18)
+      drop-shadow(0 0 0.35rem rgb(0 217 255 / 95%))
+      drop-shadow(0 0 0.85rem rgb(22 119 255 / 78%))
+      drop-shadow(0 0 1.45rem rgb(124 60 255 / 62%))
+      drop-shadow(0 0 2.1rem rgb(255 63 159 / 38%));
   }
   100% {
-    border-color: rgb(22 135 255 / 8%);
-    box-shadow: inset 0 0 0.75rem rgb(22 135 255 / 4%);
-    opacity: 0.16;
+    opacity: 0.1;
+    filter: saturate(1.2);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -856,9 +870,11 @@ body.is-playing .play-view { display: block !important; }
 @keyframes player-dot-beat {
   0% {
     transform: scale(1.75);
-    background: #008eff;
-    border-color: #008eff;
-    box-shadow: 0 0 0.65rem rgb(0 142 255 / 72%);
+    background: linear-gradient(135deg, #00d9ff, #1677ff 42%, #7c3cff 72%, #ff3f9f);
+    border-color: #4f7dff;
+    box-shadow:
+      0 0 0.55rem rgb(0 217 255 / 74%),
+      0 0 0.95rem rgb(124 60 255 / 44%);
   }
   100% {
     transform: scale(1);

@@ -215,6 +215,8 @@ Ved `visibilitychange` skal Spill-modus forsøke å gjenopprette låsen dersom:
 
 Feil i Wake Lock skal ikke krasje Spill-modus.
 
+Visuell BPM-puls bruker en fast ca. 300 ms markering uavhengig av BPM. BPM bestemmer tidspunktet for slagene. Spill-kanten kan bruke en statisk flerfarget gradient der bare intensitet/glow pulserer; dette skal ikke påvirke innhold eller touch.
+
 ### 10.1 Visuell BPM-puls
 
 Spill-modus bruker én BPM-klokke for visuelle beat-signaler. Når visuell puls er aktiv, kan samme beat-hendelse drive både den kompakte BPM-indikatoren og en subtil viewport-kant. Det skal ikke opprettes parallelle timere for de to visningene.
@@ -234,6 +236,8 @@ IndexedDB brukes til:
 - lokale preferanser
 
 Sensitive tokens skal ikke behandles som ordinær persistent appdata uten at autentiseringsbibliotekets anbefalte modell tilsier dette.
+
+Private notater er et bevisst unntak fra kravet om aktiv online-identitet: sist brukte stabile Microsoft-konto-ID kan huskes lokalt for å velge riktig konto-/workspace-isolerte IndexedDB-cache på personlige enheter. Dette gir ingen ekstern tilgang; OneDrive-synk krever fortsatt aktiv Microsoft-innlogging.
 
 Private notater er et bevisst unntak fra regelen om ingen offline-skriving av fellesdata: de er personlige data med egen konto-/workspace-isolert IndexedDB-arbeidskopi. Ved oppstart skal denne state lastes før sanginnhold rendres, slik at notater er tilgjengelige også etter en ren offline-oppstart.
 

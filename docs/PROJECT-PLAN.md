@@ -577,6 +577,7 @@ Valgt modell:
 
 - lokal arbeidskopi i IndexedDB
 - cache nøkklet på Microsoft-konto + workspace
+- sist brukte private-note-konto-ID kan huskes lokalt på personlige enheter slik at cache fungerer uten aktiv Microsoft-økt
 - autoritativ kopi i brukerens private OneDrive
 - én `notes.json` per workspace under `Akkordia/private/<workspaceId>/`
 - automatisk synk når nett og autentisering er tilgjengelig
@@ -584,7 +585,7 @@ Valgt modell:
 - merge på `songId`, slik at ulike noter ikke gir reell konflikt
 - konfliktkopi bevares lokalt når samme note er endret begge steder
 
-Private notater kan redigeres offline, også når felles sang- og set-listdata ellers er i lesemodus.
+Private notater kan redigeres offline og online uten aktiv Microsoft-økt når lokal private-note-identitet allerede er etablert. OneDrive-synk krever fortsatt innlogging.
 
 Eksplisitt utlogging skal fortsatt skjule private notater inntil en Microsoft-konto igjen identifiserer hvilken konto-/workspace-cache som tilhører brukeren. Lokal privatnotat-state skal gjenopprettes før sangvisningen rendres ved oppstart, slik at notatene også er tilgjengelige etter full restart uten nett.
 
