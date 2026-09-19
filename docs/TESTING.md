@@ -150,6 +150,16 @@ Scenario B:
 - deaktiver pulsen og kontroller at kanten stopper
 - vurder synlighet og distraksjonsnivå på iPad/iPhone i faktisk spillemiljø
 
+### 3.11 BPM-kant M12.1
+
+- kontroller tydeligere 4 px blå/cyan kant i Spill-modus
+- kontroller at Spill-bakgrunn er svak nøytral grå og fortsatt lett å lese
+- test lav BPM (ca. 50–70) og høy BPM (ca. 160–190)
+- kontroller at visuell puls varer omtrent 300 ms uavhengig av BPM
+- kontroller at raske slag restarter animasjonen i stedet for å låse markeringen aktiv
+- kontroller at BPM-prikk og kant oppleves synkronisert
+- kontroller at eksplisitt utlogging ikke viser cachede private notater, mens offline med kjent konto gjør det
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.

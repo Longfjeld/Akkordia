@@ -445,6 +445,7 @@ Ved spilling av set-list skal brukeren enkelt kunne:
 - starte/pause autoscroll
 - se aktuell posisjon i sangen
 - justere lokal visningsstørrelse dersom dette implementeres
+- oppfatte BPM perifert via valgfri visuell kantpuls med fast beat-animasjon
 - bruke en valgfri visuell BPM-puls som kan oppfattes perifert under spilling
 - avslutte Spill-modus
 
@@ -583,7 +584,9 @@ Valgt modell:
 - merge på `songId`, slik at ulike noter ikke gir reell konflikt
 - konfliktkopi bevares lokalt når samme note er endret begge steder
 
-Private notater kan redigeres offline, også når felles sang- og set-listdata ellers er i lesemodus. Lokal privatnotat-state skal gjenopprettes før sangvisningen rendres ved oppstart, slik at notatene også er tilgjengelige etter full restart uten nett.
+Private notater kan redigeres offline, også når felles sang- og set-listdata ellers er i lesemodus.
+
+Eksplisitt utlogging skal fortsatt skjule private notater inntil en Microsoft-konto igjen identifiserer hvilken konto-/workspace-cache som tilhører brukeren. Lokal privatnotat-state skal gjenopprettes før sangvisningen rendres ved oppstart, slik at notatene også er tilgjengelige etter full restart uten nett.
 
 ---
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "akkordia-shell-offline-notes-bpm-edge-12-v1";
+const CACHE_NAME = "akkordia-shell-bpm-edge-12-1-v1";
 const APP_SHELL = [
   "./",
   "./index.html",

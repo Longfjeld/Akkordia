@@ -745,7 +745,7 @@ body.is-playing .play-view { display: block !important; }
   --player-font-scale: 1;
   min-height: 100vh;
   padding-bottom: 5.7rem;
-  background: #fff;
+  background: #f3f4f6;
 }
 .player-shell.has-visual-pulse::after {
   content: "";
@@ -753,22 +753,31 @@ body.is-playing .play-view { display: block !important; }
   inset: 0;
   z-index: 100;
   pointer-events: none;
-  border: 2px solid rgb(70 105 145 / 18%);
+  border: 4px solid rgb(22 135 255 / 8%);
   border-radius: 0.8rem;
-  box-shadow: inset 0 0 0.8rem rgb(70 105 145 / 8%);
-  opacity: 0.28;
-  transition: opacity 260ms ease-out, border-color 260ms ease-out, box-shadow 260ms ease-out;
+  box-shadow: inset 0 0 0.75rem rgb(22 135 255 / 4%);
+  opacity: 0.16;
 }
 .player-shell.has-visual-pulse.is-beat::after {
-  border-color: rgb(45 105 175 / 72%);
-  box-shadow:
-    inset 0 0 0.55rem rgb(45 105 175 / 34%),
-    inset 0 0 1.5rem rgb(80 135 195 / 18%);
-  opacity: 1;
-  transition-duration: 45ms;
+  animation: player-edge-beat 300ms cubic-bezier(.18,.72,.28,1) both;
+}
+@keyframes player-edge-beat {
+  0% {
+    border-color: rgb(0 142 255 / 100%);
+    box-shadow:
+      inset 0 0 0.75rem rgb(0 142 255 / 78%),
+      inset 0 0 2.25rem rgb(0 190 255 / 48%),
+      inset 0 0 4.5rem rgb(45 120 255 / 20%);
+    opacity: 1;
+  }
+  100% {
+    border-color: rgb(22 135 255 / 8%);
+    box-shadow: inset 0 0 0.75rem rgb(22 135 255 / 4%);
+    opacity: 0.16;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .player-shell.has-visual-pulse::after { transition: none; }
+  .player-shell.has-visual-pulse.is-beat::after { animation: none; }
 }
 .player-topbar {
   position: sticky;
@@ -781,7 +790,7 @@ body.is-playing .play-view { display: block !important; }
   min-height: 3.4rem;
   padding: 0.45rem max(0.65rem, env(safe-area-inset-right)) 0.45rem max(0.65rem, env(safe-area-inset-left));
   border-bottom: 1px solid #d8dee4;
-  background: rgb(255 255 255 / 97%);
+  background: rgb(243 244 246 / 97%);
   backdrop-filter: blur(10px);
 }
 .player-exit {
@@ -839,13 +848,24 @@ body.is-playing .play-view { display: block !important; }
   border: 2px solid #59636e;
   border-radius: 50%;
   background: transparent;
-  transition: transform 80ms ease, background 80ms ease, border-color 80ms ease;
 }
 .player-bpm.is-enabled .player-beat-dot { background: #59636e; }
 .player-beat-dot.is-beat {
-  transform: scale(1.6);
-  background: #1f2328;
-  border-color: #1f2328;
+  animation: player-dot-beat 300ms cubic-bezier(.18,.72,.28,1) both;
+}
+@keyframes player-dot-beat {
+  0% {
+    transform: scale(1.75);
+    background: #008eff;
+    border-color: #008eff;
+    box-shadow: 0 0 0.65rem rgb(0 142 255 / 72%);
+  }
+  100% {
+    transform: scale(1);
+    background: #59636e;
+    border-color: #59636e;
+    box-shadow: none;
+  }
 }
 .player-font-controls {
   display: grid;

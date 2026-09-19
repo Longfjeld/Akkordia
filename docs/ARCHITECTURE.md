@@ -189,6 +189,12 @@ C/G     +2 → D/A
 
 Vanlig sangvisning og Spill-modus skal bruke samme funksjon. Editor viser og lagrer original akkordtekst og transpose-verdier; den omskriver ikke akkorddata. Ukjente symboler som ikke kan tolkes som et akkordnavn beholdes uendret.
 
+## 8.2 Visuell BPM-puls
+
+I Spill-modus er BPM-pulsen en visningsfunksjon, ikke sangdata. Den eksisterende beat-klokken bestemmer tidspunktet for hvert slag, mens den visuelle animasjonen har fast varighet på omtrent 300 ms uavhengig av BPM. Både BPM-prikken og viewport-kanten bruker samme beat-hendelse.
+
+Spill-flaten bruker en svak nøytral grå bakgrunn for å gi bedre kontrast til den blå/cyane beat-kanten. Selve kanten fanger ikke peker-/touch-hendelser.
+
 ## 9. Autoscroll
 
 Autoscroll skal være deterministisk basert på felles sangdata, primært BPM og sangens linje-/beatmodell.

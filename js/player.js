@@ -5,6 +5,7 @@ const FONT_LEVELS = [0.8, 0.9, 1, 1.1, 1.25, 1.4];
 const FONT_KEY = "akkordia.player.fontScale.v1";
 const PULSE_KEY = "akkordia.player.visualPulse.v1";
 const COUNT_IN_KEY = "akkordia.player.countIn.v1";
+const BEAT_FLASH_MS = 300;
 const COUNT_IN_BEATS = 4;
 
 export function createPlayer(container, { setlist, songs, lyricsView = "both", privateNotes = {}, onPrivateNoteChange = null, onPrivateNoteBlur = null, onExit }) {
@@ -417,14 +418,22 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
 
   function flashBeat() {
     if (!pulseIndicator) return;
+
+    // Restart the visual beat independently of BPM. Removing and re-adding
+    // the class also restarts the CSS animation if beats arrive quickly.
+    pulseIndicator.classList.remove("is-beat");
+    shell.classList.remove("is-beat");
+    void pulseIndicator.offsetWidth;
+
     pulseIndicator.classList.add("is-beat");
     if (pulseEnabled) shell.classList.add("is-beat");
+
     if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
     pulseFlashTimer = setTimeout(() => {
       pulseIndicator?.classList.remove("is-beat");
       shell.classList.remove("is-beat");
       pulseFlashTimer = null;
-    }, Math.min(220, beatDelay() * 0.42));
+    }, BEAT_FLASH_MS);
   }
 
   function clearPulseClock() {

@@ -63,3 +63,7 @@ Vanlig sangvisning har et eget felt for privat notat. Spill-modus har et sammenl
 Ved app-oppstart skal lokal privatnotat-state leses fra IndexedDB **før** sangvisningen rendres. Dette er nødvendig fordi en offline-oppstart ikke har en etterfølgende OneDrive-synk som ellers kan oppdatere state.
 
 Private notater skal derfor være både synlige og redigerbare etter full omstart uten nett. Felles sang- og set-listdata forblir read-only offline. Lokale endringer markeres dirty og synkroniseres når nettet kommer tilbake.
+
+## Offline kontra eksplisitt utlogging
+
+Offline med en fortsatt kjent Microsoft-konto skal bruke den konto-/workspace-isolerte IndexedDB-cachen og tillate lokal redigering. Eksplisitt utlogging er annerledes: uten kontoidentitet skal Akkordia ikke velge eller vise en tidligere brukers private cache. Brukeren må logge inn igjen før private notater vises.
