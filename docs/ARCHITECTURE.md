@@ -191,9 +191,9 @@ Vanlig sangvisning og Spill-modus skal bruke samme funksjon. Editor viser og lag
 
 ## 8.2 Visuell BPM-puls
 
-I Spill-modus er BPM-pulsen en visningsfunksjon, ikke sangdata. Den eksisterende beat-klokken bestemmer tidspunktet for hvert slag, mens den visuelle animasjonen har fast varighet på omtrent 300 ms uavhengig av BPM. Både BPM-prikken og viewport-kanten bruker samme beat-hendelse.
+I Spill-modus er BPM-pulsen en visningsfunksjon, ikke sangdata. Den eksisterende beat-klokken bestemmer tidspunktet for hvert slag, mens den visuelle animasjonen har fast varighet på omtrent 300 ms uavhengig av BPM. BPM-knappen viser BPM og slår den visuelle pulsen av/på; den har ikke en separat blinkende prikk.
 
-Spill-flaten bruker en svak nøytral grå bakgrunn for å gi bedre kontrast til beat-kanten. Kanten består av en mettet 8 px flerfarget ytterring og et separat, bredere glødlag som fader til full transparens innover på skjermen. Selve kanten fanger ikke peker-/touch-hendelser.
+Spill-flaten bruker en svak nøytral grå bakgrunn for å gi bedre kontrast til beat-signalet. Pulsen består av ett sammenhengende flerfarget felt som er sterkest helt ved viewport-kanten og fader kontinuerlig til full transparens omtrent 34 px innover. Det brukes ikke separate ytter- og glødringer. Pulslaget fanger ikke peker-/touch-hendelser.
 
 ## 9. Autoscroll
 
@@ -215,11 +215,11 @@ Ved `visibilitychange` skal Spill-modus forsøke å gjenopprette låsen dersom:
 
 Feil i Wake Lock skal ikke krasje Spill-modus.
 
-Visuell BPM-puls bruker en fast ca. 300 ms markering uavhengig av BPM. BPM bestemmer tidspunktet for slagene. Spill-kanten bruker en statisk flerfarget gradient med full metning ytterst mot skjermkanten og en separat transparent fade/glød innover; bare intensiteten pulserer. Dette skal ikke påvirke innhold eller touch.
+Visuell BPM-puls bruker en fast ca. 300 ms markering uavhengig av BPM. BPM bestemmer tidspunktet for slagene. Spill-kanten bruker ett statisk flerfarget felt med høy intensitet ved skjermkanten og en kontinuerlig alfa-fade til null innover; bare intensiteten pulserer. Dette skal ikke påvirke innhold eller touch.
 
 ### 10.1 Visuell BPM-puls
 
-Spill-modus bruker én BPM-klokke for visuelle beat-signaler. Når visuell puls er aktiv, kan samme beat-hendelse drive både den kompakte BPM-indikatoren og en subtil viewport-kant. Det skal ikke opprettes parallelle timere for de to visningene.
+Spill-modus bruker én BPM-klokke for det visuelle beat-signalet. Når visuell puls er aktiv, driver beat-hendelsen viewport-kanten direkte. BPM-knappen er av/på-kontroll og tekstindikator, ikke en egen pulserende indikator.
 
 Kanten er ren UI-tilstand, lagres ikke i sangdata og skal ikke fange peker-/touch-hendelser.
 

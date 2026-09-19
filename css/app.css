@@ -747,89 +747,64 @@ body.is-playing .play-view { display: block !important; }
   padding-bottom: 5.7rem;
   background: #f3f4f6;
 }
-/* Visual BPM pulse: saturated outer edge plus soft inward glow. */
-.player-shell.has-visual-pulse::before,
-.player-shell.has-visual-pulse::after {
+/* Visual BPM pulse: one continuous colour field fading inward from the viewport edge. */
+.player-shell.has-visual-pulse::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 100;
   pointer-events: none;
-  border-radius: 0.9rem;
   background: conic-gradient(
     from 32deg,
-    #00e5ff 0deg,
-    #1268ff 82deg,
-    #7f35ff 170deg,
-    #ff2f9f 258deg,
-    #00e5ff 360deg
+    #008fb3 0deg,
+    #004fd6 82deg,
+    #6420c9 170deg,
+    #c71878 258deg,
+    #008fb3 360deg
   );
+  /*
+   * A single mask makes the colour fully present at the physical screen edge
+   * and continuously fades the same colour field to transparency inward.
+   * Multiple mask layers are additive, so corners remain continuous rather
+   * than forming a second visible ring.
+   */
   -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-/* Soft light zone: wider than the solid edge and blurred so opacity fades inward. */
-.player-shell.has-visual-pulse::before {
-  padding: 24px;
-  opacity: 0;
-  filter: blur(10px) saturate(1.55) brightness(1.08);
-}
-
-/* Solid edge: deliberately fully saturated on the screen perimeter. */
-.player-shell.has-visual-pulse::after {
-  padding: 8px;
-  opacity: 0.035;
-  filter: saturate(1.35);
+    linear-gradient(to bottom, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) top / 100% 34px no-repeat,
+    linear-gradient(to top, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) bottom / 100% 34px no-repeat,
+    linear-gradient(to right, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) left / 34px 100% no-repeat,
+    linear-gradient(to left, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) right / 34px 100% no-repeat;
+  mask:
+    linear-gradient(to bottom, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) top / 100% 34px no-repeat,
+    linear-gradient(to top, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) bottom / 100% 34px no-repeat,
+    linear-gradient(to right, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) left / 34px 100% no-repeat,
+    linear-gradient(to left, #000 0, rgb(0 0 0 / 96%) 4px, rgb(0 0 0 / 72%) 11px, rgb(0 0 0 / 38%) 21px, transparent 34px) right / 34px 100% no-repeat;
+  opacity: 0.018;
+  filter: saturate(1.3);
 }
 
 .player-shell.has-visual-pulse.is-beat::before {
-  animation: player-edge-glow-beat 300ms cubic-bezier(.18,.72,.28,1) both;
-}
-.player-shell.has-visual-pulse.is-beat::after {
-  animation: player-edge-beat 300ms cubic-bezier(.18,.72,.28,1) both;
+  animation: player-edge-field-beat 300ms cubic-bezier(.18,.72,.28,1) both;
 }
 
-@keyframes player-edge-beat {
+@keyframes player-edge-field-beat {
   0% {
     opacity: 1;
-    filter:
-      saturate(1.9)
-      brightness(1.22)
-      drop-shadow(0 0 0.35rem rgb(0 229 255 / 95%))
-      drop-shadow(0 0 0.85rem rgb(18 104 255 / 82%))
-      drop-shadow(0 0 1.35rem rgb(127 53 255 / 66%))
-      drop-shadow(0 0 1.9rem rgb(255 47 159 / 42%));
+    filter: saturate(1.75) brightness(0.98);
+  }
+  24% {
+    opacity: 0.88;
+    filter: saturate(1.68) brightness(1);
   }
   100% {
-    opacity: 0.035;
-    filter: saturate(1.35);
-  }
-}
-
-@keyframes player-edge-glow-beat {
-  0% {
-    opacity: 0.82;
-    filter:
-      blur(10px)
-      saturate(1.9)
-      brightness(1.18);
-  }
-  100% {
-    opacity: 0;
-    filter:
-      blur(14px)
-      saturate(1.45)
-      brightness(1.02);
+    opacity: 0.018;
+    filter: saturate(1.3) brightness(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .player-shell.has-visual-pulse.is-beat::before,
-  .player-shell.has-visual-pulse.is-beat::after { animation: none; }
+  .player-shell.has-visual-pulse.is-beat::before { animation: none; }
 }
+
 .player-topbar {
   position: sticky;
   top: 0;
@@ -882,9 +857,8 @@ body.is-playing .play-view { display: block !important; }
 .player-bpm {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
   min-height: 2.6rem;
-  padding: 0.35rem 0.55rem;
+  padding: 0.35rem 0.65rem;
   border: 1px solid #d0d7de;
   border-radius: 999px;
   background: #fff;
@@ -892,33 +866,9 @@ body.is-playing .play-view { display: block !important; }
   font-size: 0.82rem;
   white-space: nowrap;
 }
-.player-bpm.is-enabled { background: #f6f7f8; }
-.player-beat-dot {
-  width: 0.65rem;
-  height: 0.65rem;
-  border: 2px solid #59636e;
-  border-radius: 50%;
-  background: transparent;
-}
-.player-bpm.is-enabled .player-beat-dot { background: #59636e; }
-.player-beat-dot.is-beat {
-  animation: player-dot-beat 300ms cubic-bezier(.18,.72,.28,1) both;
-}
-@keyframes player-dot-beat {
-  0% {
-    transform: scale(1.75);
-    background: linear-gradient(135deg, #00d9ff, #1677ff 42%, #7c3cff 72%, #ff3f9f);
-    border-color: #4f7dff;
-    box-shadow:
-      0 0 0.55rem rgb(0 217 255 / 74%),
-      0 0 0.95rem rgb(124 60 255 / 44%);
-  }
-  100% {
-    transform: scale(1);
-    background: #59636e;
-    border-color: #59636e;
-    box-shadow: none;
-  }
+.player-bpm.is-enabled {
+  border-color: #7d84a1;
+  background: #eef0f6;
 }
 .player-font-controls {
   display: grid;

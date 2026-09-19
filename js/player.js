@@ -24,7 +24,6 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
   let countInEnabled = readBoolean(COUNT_IN_KEY, false);
   let pulseTimer = null;
   let pulseFlashTimer = null;
-  let pulseIndicator = null;
   let bpmLabel = null;
   let countInRemaining = 0;
 
@@ -85,12 +84,9 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
     const bpm = button("", `player-bpm${pulseEnabled ? " is-enabled" : ""}`);
     bpm.title = pulseEnabled ? "Slå av visuell puls" : "Slå på visuell puls";
     bpm.setAttribute("aria-pressed", String(pulseEnabled));
-    pulseIndicator = document.createElement("span");
-    pulseIndicator.className = "player-beat-dot";
-    pulseIndicator.setAttribute("aria-hidden", "true");
     bpmLabel = document.createElement("span");
     bpmLabel.textContent = `${playback.bpm} BPM`;
-    bpm.append(pulseIndicator, bpmLabel);
+    bpm.append(bpmLabel);
     bpm.addEventListener("click", () => {
       pulseEnabled = !pulseEnabled;
       localStorage.setItem(PULSE_KEY, String(pulseEnabled));
@@ -417,20 +413,15 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
   }
 
   function flashBeat() {
-    if (!pulseIndicator) return;
-
-    // Restart the visual beat independently of BPM. Removing and re-adding
-    // the class also restarts the CSS animation if beats arrive quickly.
-    pulseIndicator.classList.remove("is-beat");
+    // Restart the edge pulse independently of BPM. BPM decides only when the
+    // next beat occurs; the visual pulse always uses the same duration.
     shell.classList.remove("is-beat");
-    void pulseIndicator.offsetWidth;
+    void shell.offsetWidth;
 
-    pulseIndicator.classList.add("is-beat");
     if (pulseEnabled) shell.classList.add("is-beat");
 
     if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
     pulseFlashTimer = setTimeout(() => {
-      pulseIndicator?.classList.remove("is-beat");
       shell.classList.remove("is-beat");
       pulseFlashTimer = null;
     }, BEAT_FLASH_MS);
@@ -441,7 +432,6 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
     if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
     pulseTimer = null;
     pulseFlashTimer = null;
-    pulseIndicator?.classList.remove("is-beat");
     shell.classList.remove("is-beat");
   }
 

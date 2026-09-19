@@ -476,7 +476,7 @@ Wake Lock skal ikke holdes aktiv unødvendig i vanlig redigerings- eller bibliot
 
 ### 11.4 Visuell BPM-puls
 
-Når visuell BPM-puls er aktiv i Spill-modus, brukes en fast ca. 300 ms beat-animasjon uavhengig av BPM. Selve signalet består av en mettet flerfarget ytterkant på ca. 8 px og et bredere transparent glødlag som fader innover på skjermen. BPM bestemmer når neste puls starter, ikke hvor lenge pulsen varer.
+Når visuell BPM-puls er aktiv i Spill-modus, brukes en fast ca. 300 ms beat-animasjon uavhengig av BPM. Signalet er ett sammenhengende flerfarget felt som starter med høy intensitet ved skjermkanten og fader mykt og kontinuerlig til full transparens omtrent 34 px innover. Det brukes ikke en separat BPM-prikk eller flere synlige ringer. BPM bestemmer når neste puls starter, ikke hvor lenge pulsen varer.
 
 ---
 

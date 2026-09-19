@@ -190,6 +190,17 @@ Scenario B:
 - kontroller at BPM-prikken fortsatt fungerer som i M12.2
 
 
+### 3.14 BPM-kant M12.4
+
+- kontroller at pulsen oppleves som om den kommer fra selve skjermkanten og fyller mykt innover
+- kontroller at det ikke finnes to separate synlige ringer/streker
+- kontroller kontinuerlig overgang fra kraftig/mettet farge ved ytterkant til full transparens ca. 34 px innover
+- kontroller at BPM-knappen fortsatt viser BPM og slår pulsen av/på, men ikke har egen blinkende prikk
+- vurder perifer synlighet på både iPhone og iPad
+- test ca. 60 BPM og 180 BPM og kontroller fortsatt fast ca. 300 ms pulsvarighet
+- kontroller at innhold, scrolling, count-in, autoscroll og touch-kontroller ikke påvirkes
+
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.
