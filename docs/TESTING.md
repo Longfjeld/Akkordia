@@ -131,6 +131,25 @@ Scenario B:
 - sett transpose tilbake til `0` og kontroller at originalakkordene vises igjen
 - kjør `npm run test:transpose`
 
+### 3.11 Private notater ved offline-oppstart
+
+- opprett/synkroniser et privat notat online
+- lukk PWA helt og start den på nytt offline
+- kontroller at notatet er synlig før nett blir tilgjengelig
+- rediger notatet offline og kontroller `Lagret lokalt · venter på nett`
+- restart fortsatt offline og kontroller at endringen består
+- gå online og kontroller synk uten datatap
+- kontroller samme flyt i Spill-modus
+
+### 3.12 Visuell BPM-kant
+
+- aktiver visuell BPM-puls i Spill
+- kontroller at BPM-prikk og viewport-kant følger samme beat-klokke
+- test langsom og rask BPM
+- kontroller at kanten ikke blokkerer touch, knapper eller scrolling
+- deaktiver pulsen og kontroller at kanten stopper
+- vurder synlighet og distraksjonsnivå på iPad/iPhone i faktisk spillemiljø
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.

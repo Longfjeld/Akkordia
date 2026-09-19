@@ -79,6 +79,8 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
     const tools = document.createElement("div");
     tools.className = "player-top-tools";
 
+    shell.classList.toggle("has-visual-pulse", pulseEnabled);
+
     const bpm = button("", `player-bpm${pulseEnabled ? " is-enabled" : ""}`);
     bpm.title = pulseEnabled ? "Slå av visuell puls" : "Slå på visuell puls";
     bpm.setAttribute("aria-pressed", String(pulseEnabled));
@@ -94,6 +96,7 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
       bpm.classList.toggle("is-enabled", pulseEnabled);
       bpm.setAttribute("aria-pressed", String(pulseEnabled));
       bpm.title = pulseEnabled ? "Slå av visuell puls" : "Slå på visuell puls";
+      shell.classList.toggle("has-visual-pulse", pulseEnabled);
       syncPulseClock(true);
     });
 
@@ -415,11 +418,13 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
   function flashBeat() {
     if (!pulseIndicator) return;
     pulseIndicator.classList.add("is-beat");
+    if (pulseEnabled) shell.classList.add("is-beat");
     if (pulseFlashTimer) clearTimeout(pulseFlashTimer);
     pulseFlashTimer = setTimeout(() => {
       pulseIndicator?.classList.remove("is-beat");
+      shell.classList.remove("is-beat");
       pulseFlashTimer = null;
-    }, Math.min(160, beatDelay() * 0.35));
+    }, Math.min(220, beatDelay() * 0.42));
   }
 
   function clearPulseClock() {
@@ -428,6 +433,7 @@ export function createPlayer(container, { setlist, songs, lyricsView = "both", p
     pulseTimer = null;
     pulseFlashTimer = null;
     pulseIndicator?.classList.remove("is-beat");
+    shell.classList.remove("is-beat");
   }
 
   function getLines() {

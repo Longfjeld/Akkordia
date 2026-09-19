@@ -209,6 +209,12 @@ Ved `visibilitychange` skal Spill-modus forsøke å gjenopprette låsen dersom:
 
 Feil i Wake Lock skal ikke krasje Spill-modus.
 
+### 10.1 Visuell BPM-puls
+
+Spill-modus bruker én BPM-klokke for visuelle beat-signaler. Når visuell puls er aktiv, kan samme beat-hendelse drive både den kompakte BPM-indikatoren og en subtil viewport-kant. Det skal ikke opprettes parallelle timere for de to visningene.
+
+Kanten er ren UI-tilstand, lagres ikke i sangdata og skal ikke fange peker-/touch-hendelser.
+
 ## 11. Offline
 
 Service Worker brukes til statiske appressurser.
@@ -222,6 +228,8 @@ IndexedDB brukes til:
 - lokale preferanser
 
 Sensitive tokens skal ikke behandles som ordinær persistent appdata uten at autentiseringsbibliotekets anbefalte modell tilsier dette.
+
+Private notater er et bevisst unntak fra regelen om ingen offline-skriving av fellesdata: de er personlige data med egen konto-/workspace-isolert IndexedDB-arbeidskopi. Ved oppstart skal denne state lastes før sanginnhold rendres, slik at notater er tilgjengelige også etter en ren offline-oppstart.
 
 ## 12. Feilmodell
 

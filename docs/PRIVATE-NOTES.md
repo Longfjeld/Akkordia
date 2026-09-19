@@ -56,3 +56,10 @@ Et tomt privatnotat fjernes fra den lokale `notes`-samlingen og sang-ID-en marke
 ## UI
 
 Vanlig sangvisning har et eget felt for privat notat. Spill-modus har et sammenleggbart privatnotatfelt som åpnes automatisk når sangen allerede har et notat.
+
+
+## Offline-oppstart
+
+Ved app-oppstart skal lokal privatnotat-state leses fra IndexedDB **før** sangvisningen rendres. Dette er nødvendig fordi en offline-oppstart ikke har en etterfølgende OneDrive-synk som ellers kan oppdatere state.
+
+Private notater skal derfor være både synlige og redigerbare etter full omstart uten nett. Felles sang- og set-listdata forblir read-only offline. Lokale endringer markeres dirty og synkroniseres når nettet kommer tilbake.

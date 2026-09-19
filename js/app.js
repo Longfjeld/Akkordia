@@ -78,8 +78,11 @@ async function start() {
 
   const workspace = getActiveWorkspace();
   if (workspace) {
-    await refreshSongs();
+    // Private notes must be restored before songs are rendered. This is especially
+    // important after an offline restart, where there is no later OneDrive sync
+    // to cause the note state to become visible.
     await initializePrivateNotes(workspace);
+    await refreshSongs();
     await primeSetlistsForOffline();
   }
 
@@ -1114,8 +1117,8 @@ ui.selectFolder.addEventListener("click", async () => {
     setlistsLastErrors = [];
     renderHeader();
     renderView();
-    await refreshSongs();
     await initializePrivateNotes(workspace);
+    await refreshSongs();
     await primeSetlistsForOffline();
     showStatus(`Bandet «${workspace.name}» er koblet til og klart.`, false);
   } catch (error) {
