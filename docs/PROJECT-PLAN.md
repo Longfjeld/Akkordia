@@ -446,7 +446,6 @@ Ved spilling av set-list skal brukeren enkelt kunne:
 - se aktuell posisjon i sangen
 - justere lokal visningsstørrelse dersom dette implementeres
 - oppfatte BPM perifert via valgfri visuell kantpuls med fast beat-animasjon
-- bruke en valgfri visuell BPM-puls som kan oppfattes perifert under spilling
 - avslutte Spill-modus
 
 ### 11.2 Redigering
@@ -474,6 +473,10 @@ Wake Lock skal:
 - feile kontrollert dersom nettleser/OS ikke tillater funksjonen
 
 Wake Lock skal ikke holdes aktiv unødvendig i vanlig redigerings- eller biblioteksvisning.
+
+### 11.4 Visuell BPM-puls
+
+Når visuell BPM-puls er aktiv i Spill-modus, brukes en fast ca. 300 ms beat-animasjon uavhengig av BPM. Selve signalet består av en mettet flerfarget ytterkant på ca. 8 px og et bredere transparent glødlag som fader innover på skjermen. BPM bestemmer når neste puls starter, ikke hvor lenge pulsen varer.
 
 ---
 

@@ -747,50 +747,87 @@ body.is-playing .play-view { display: block !important; }
   padding-bottom: 5.7rem;
   background: #f3f4f6;
 }
+/* Visual BPM pulse: saturated outer edge plus soft inward glow. */
+.player-shell.has-visual-pulse::before,
 .player-shell.has-visual-pulse::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 100;
   pointer-events: none;
-  padding: 4px;
   border-radius: 0.9rem;
   background: conic-gradient(
     from 32deg,
-    #00d9ff 0deg,
-    #1677ff 82deg,
-    #7c3cff 170deg,
-    #ff3f9f 258deg,
-    #00d9ff 360deg
+    #00e5ff 0deg,
+    #1268ff 82deg,
+    #7f35ff 170deg,
+    #ff2f9f 258deg,
+    #00e5ff 360deg
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: 0.1;
-  filter: saturate(1.2);
+}
+
+/* Soft light zone: wider than the solid edge and blurred so opacity fades inward. */
+.player-shell.has-visual-pulse::before {
+  padding: 24px;
+  opacity: 0;
+  filter: blur(10px) saturate(1.55) brightness(1.08);
+}
+
+/* Solid edge: deliberately fully saturated on the screen perimeter. */
+.player-shell.has-visual-pulse::after {
+  padding: 8px;
+  opacity: 0.035;
+  filter: saturate(1.35);
+}
+
+.player-shell.has-visual-pulse.is-beat::before {
+  animation: player-edge-glow-beat 300ms cubic-bezier(.18,.72,.28,1) both;
 }
 .player-shell.has-visual-pulse.is-beat::after {
   animation: player-edge-beat 300ms cubic-bezier(.18,.72,.28,1) both;
 }
+
 @keyframes player-edge-beat {
   0% {
     opacity: 1;
     filter:
-      saturate(1.75)
-      brightness(1.18)
-      drop-shadow(0 0 0.35rem rgb(0 217 255 / 95%))
-      drop-shadow(0 0 0.85rem rgb(22 119 255 / 78%))
-      drop-shadow(0 0 1.45rem rgb(124 60 255 / 62%))
-      drop-shadow(0 0 2.1rem rgb(255 63 159 / 38%));
+      saturate(1.9)
+      brightness(1.22)
+      drop-shadow(0 0 0.35rem rgb(0 229 255 / 95%))
+      drop-shadow(0 0 0.85rem rgb(18 104 255 / 82%))
+      drop-shadow(0 0 1.35rem rgb(127 53 255 / 66%))
+      drop-shadow(0 0 1.9rem rgb(255 47 159 / 42%));
   }
   100% {
-    opacity: 0.1;
-    filter: saturate(1.2);
+    opacity: 0.035;
+    filter: saturate(1.35);
   }
 }
+
+@keyframes player-edge-glow-beat {
+  0% {
+    opacity: 0.82;
+    filter:
+      blur(10px)
+      saturate(1.9)
+      brightness(1.18);
+  }
+  100% {
+    opacity: 0;
+    filter:
+      blur(14px)
+      saturate(1.45)
+      brightness(1.02);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .player-shell.has-visual-pulse.is-beat::before,
   .player-shell.has-visual-pulse.is-beat::after { animation: none; }
 }
 .player-topbar {

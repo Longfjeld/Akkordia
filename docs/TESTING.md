@@ -179,6 +179,17 @@ Scenario B:
 - kontroller fast ca. 300 ms pulsvarighet
 - kontroller av/på, count-in og autoscroll
 
+### 3.13 BPM-kant M12.3
+
+- kontroller at ytterkanten er tydeligere enn M12.2 og omtrent 8 px bred
+- kontroller at fargene er fullt mettede ytterst mot skjermkanten
+- kontroller at gløden fader mykt til full transparens innover og ikke fremstår som en massiv 24 px ramme
+- vurder pulsen perifert i både lyst rom og mørkere spillemiljø
+- kontroller at innhold, scrolling og touch-kontroller ikke påvirkes
+- test ca. 60 BPM og 180 BPM og kontroller fortsatt fast ca. 300 ms pulsvarighet
+- kontroller at BPM-prikken fortsatt fungerer som i M12.2
+
+
 ## 4. Migreringstest
 
 `ttc_all_songs.json` skal migreres automatisk.
